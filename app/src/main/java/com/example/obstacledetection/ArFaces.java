@@ -3,26 +3,18 @@ package com.example.obstacledetection;
 import android.content.Context;
 import android.graphics.Color;
 import android.os.Bundle;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentOnAttachListener;
-import androidx.navigation.Navigation;
-
 import android.util.Log;
-import android.view.LayoutInflater;
+
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
+
 import android.widget.LinearLayout;
-import android.widget.TableLayout;
+
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.ar.core.Anchor;
-import com.google.ar.core.AugmentedFace;
+
 import com.google.ar.core.Config;
 import com.google.ar.core.HitResult;
 import com.google.ar.core.Plane;
@@ -30,19 +22,12 @@ import com.google.ar.core.Session;
 import com.google.ar.sceneform.AnchorNode;
 import com.google.ar.sceneform.ArSceneView;
 import com.google.ar.sceneform.SceneView;
-import com.google.ar.sceneform.Sceneform;
-import com.google.ar.sceneform.rendering.ModelRenderable;
-import com.google.ar.sceneform.rendering.Texture;
+
 import com.google.ar.sceneform.rendering.ViewRenderable;
 import com.google.ar.sceneform.ux.ArFragment;
-import com.google.ar.sceneform.ux.ArFrontFacingFragment;
-import com.google.ar.sceneform.ux.AugmentedFaceNode;
+
 import com.google.ar.sceneform.ux.BaseArFragment;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 
 public class ArFaces extends ArFragment implements BaseArFragment.OnTapArPlaneListener, BaseArFragment.OnSessionConfigurationListener, ArFragment.OnViewCreatedListener {
 
@@ -83,7 +68,6 @@ public class ArFaces extends ArFragment implements BaseArFragment.OnTapArPlaneLi
 
     @Override
     public void onSessionConfiguration(Session session, Config config) {
-        Toast.makeText(getActivity(),"ggggg", Toast.LENGTH_LONG).show();
         if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
             config.setDepthMode(Config.DepthMode.AUTOMATIC);
         }
