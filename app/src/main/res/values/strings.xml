@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">ObstacleDetection</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="arfaces_button">ArFaces</string>
+    <string name="Go_to_home_text">Home</string>
 </resources>
