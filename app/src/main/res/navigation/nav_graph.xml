@@ -17,9 +17,5 @@
         android:id="@+id/arFaces"
         android:name="com.example.obstacledetection.ArFaces"
         android:label="fragment_ar_faces"
-        tools:layout="@layout/fragment_ar_faces" >
-        <action
-            android:id="@+id/backtohome_action"
-            app:destination="@id/homeFragment" />
-    </fragment>
+        tools:layout="@layout/fragment_ar_faces" />
 </navigation>

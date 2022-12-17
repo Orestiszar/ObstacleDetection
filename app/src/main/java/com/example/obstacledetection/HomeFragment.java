@@ -32,6 +32,6 @@ public class HomeFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        view.findViewById(R.id.ARFaces_button).setOnClickListener(Navigation.createNavigateOnClickListener(R.id.toar_action));
+        view.findViewById(R.id.ARPlanes_button).setOnClickListener(Navigation.createNavigateOnClickListener(R.id.toar_action));
     }
 }

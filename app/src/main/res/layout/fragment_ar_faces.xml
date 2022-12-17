@@ -6,19 +6,8 @@
     android:layout_height="match_parent"
     tools:context=".ArFaces">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <FrameLayout
+        android:id="@+id/myarFragment"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#03A9F4">
-
-        <Button
-            android:id="@+id/goto_home_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/Go_to_home_text"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent" />
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
+        android:layout_height="match_parent" />
 </FrameLayout>
