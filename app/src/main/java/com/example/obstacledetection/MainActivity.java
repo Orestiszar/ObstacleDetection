@@ -17,6 +17,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -49,7 +50,9 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     private ViewRenderable viewRenderable;
     private String title = "Anchor";
     private ArSceneView arSceneView;
-    private TextView testText;
+    private TextView[][] text_array;
+    private FrameLayout outer_frame_layout;
+    private ImageView custom_imageview;
 
     private void buildModel() {
         ViewRenderable.builder()
@@ -92,7 +95,29 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             }
         }
         buildModel();
-        this.testText = findViewById(R.id.testText);
+
+        this.text_array = new TextView[4][4];
+        this.text_array[0][0] = findViewById(R.id.text00);
+        this.text_array[0][1] = findViewById(R.id.text01);
+        this.text_array[0][2] = findViewById(R.id.text02);
+
+        this.text_array[1][0] = findViewById(R.id.text10);
+        this.text_array[1][1] = findViewById(R.id.text11);
+        this.text_array[1][2] = findViewById(R.id.text12);
+
+        this.text_array[2][0] = findViewById(R.id.text20);
+        this.text_array[2][1] = findViewById(R.id.text21);
+        this.text_array[2][2] = findViewById(R.id.text22);
+
+        this.text_array[3][0] = findViewById(R.id.text30);
+        this.text_array[3][1] = findViewById(R.id.text31);
+        this.text_array[3][2] = findViewById(R.id.text32);
+
+        outer_frame_layout = findViewById(R.id.outer_frame_layout);
+        this.custom_imageview = new ImageView(this);
+        this.custom_imageview.setImageResource(R.mipmap.ic_launcher);
+        this.custom_imageview.setBackgroundColor(Color.argb(255, 0,0,0));
+        outer_frame_layout.addView(this.custom_imageview);
     }
 
     @Override
@@ -121,12 +146,6 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     }
 
     private void onSceneUpdate(FrameTime updatedTime) {
-//        Frame frame = arSceneView.getArFrame();
-//        Collection<Anchor> updatedAnchors = frame.getUpdatedAnchors();
-//        for (Anchor anchor : updatedAnchors) {
-//            // Handle updated anchors...
-//        }
-
         Image depthImage = null;
         Frame frame = this.arSceneView.getArFrame();
         try {
@@ -134,11 +153,16 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             // Use the depth image here.
             if(depthImage == null){
 //                Toast.makeText(this, "depthImage Null", Toast.LENGTH_LONG).show();
-                this.testText.setText("Null");
+                for(int i=0;i<4;i++){
+                    for(int j=0;j<4;j++){
+                        this.text_array[i][j].setText("Null");
+                    }
+                }
             }
             else{
                 int debugdistance = getMillimetersDepth(depthImage, 80,45);
-                this.testText.setText(Integer.toString(debugdistance));
+//                this.testText.setText(Integer.toString(debugdistance));
+                this.custom_imageview.setImageBitmap(ImageToBitmap(depthImage));
 
             }
         } catch (NotYetAvailableException e) {
@@ -174,6 +198,37 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         int byteIndex = x * plane.getPixelStride() + y * plane.getRowStride();
         ByteBuffer buffer = plane.getBuffer().order(ByteOrder.nativeOrder());
         return buffer.getShort(byteIndex);
+    }
+
+    public Bitmap ImageToBitmap(Image depthImage) {
+        // The depth image has a single plane, which stores depth for each
+        // pixel as 16-bit unsigned integers.
+        Image.Plane plane = depthImage.getPlanes()[0];
+        ByteBuffer buffer = plane.getBuffer().order(ByteOrder.nativeOrder());
+
+        Bitmap bitmap = Bitmap.createBitmap(90, 160, Bitmap.Config.ARGB_8888);
+        int byteIndex, dist;
+
+        for(int height=0;height<160; height++){
+            for(int width=90; width<90;width++){
+                byteIndex = height * plane.getPixelStride() + width * plane.getRowStride();
+                dist = buffer.getShort(byteIndex);
+                if(dist<1000){
+                    bitmap.setPixel(width,height,Color.argb(255, 255,0,0));
+                }
+                else if(dist>1000 && dist<2000){
+                    bitmap.setPixel(width,height,Color.argb(255, 0,255,0));
+                }
+                else{
+                    bitmap.setPixel(width,height,Color.argb(255, 0,0,255));
+                }
+            }
+        }
+
+//        bitmap.copyPixelsFromBuffer(buffer);
+
+//        Bitmap bitmap = BitmapFactory.decodeByteArray(imageBytes,0,imageBytes.length);
+        return bitmap;
     }
 
 
