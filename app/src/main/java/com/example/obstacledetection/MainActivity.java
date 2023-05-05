@@ -115,8 +115,9 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 
         outer_frame_layout = findViewById(R.id.outer_frame_layout);
         this.custom_imageview = new ImageView(this);
-        this.custom_imageview.setImageResource(R.mipmap.ic_launcher);
-        this.custom_imageview.setBackgroundColor(Color.argb(255, 0,0,0));
+//        this.custom_imageview.setImageResource(R.mipmap.ic_launcher);
+        this.custom_imageview.setRotation(90);
+//        this.custom_imageview.setLayoutParams(new FrameLayout.LayoutParams(900,1600));
         outer_frame_layout.addView(this.custom_imageview);
     }
 
@@ -149,7 +150,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         Image depthImage = null;
         Frame frame = this.arSceneView.getArFrame();
         try {
-            depthImage = frame.acquireDepthImage16Bits();
+            depthImage = frame.acquireDepthImage16Bits(); //160*90
             // Use the depth image here.
             if(depthImage == null){
 //                Toast.makeText(this, "depthImage Null", Toast.LENGTH_LONG).show();
@@ -206,29 +207,26 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         Image.Plane plane = depthImage.getPlanes()[0];
         ByteBuffer buffer = plane.getBuffer().order(ByteOrder.nativeOrder());
 
-        Bitmap bitmap = Bitmap.createBitmap(90, 160, Bitmap.Config.ARGB_8888);
+        Bitmap bitmap = Bitmap.createBitmap(160, 90, Bitmap.Config.ARGB_8888);
         int byteIndex, dist;
 
-        for(int height=0;height<160; height++){
-            for(int width=90; width<90;width++){
-                byteIndex = height * plane.getPixelStride() + width * plane.getRowStride();
+        for(int height=0;height<90; height++){
+            for(int width=0; width<160;width++){
+                byteIndex = width * plane.getPixelStride() + height * plane.getRowStride();
                 dist = buffer.getShort(byteIndex);
                 if(dist<1000){
-                    bitmap.setPixel(width,height,Color.argb(255, 255,0,0));
+                    bitmap.setPixel(width,height,Color.argb(128, 255,0,0));
                 }
                 else if(dist>1000 && dist<2000){
-                    bitmap.setPixel(width,height,Color.argb(255, 0,255,0));
+                    bitmap.setPixel(width,height,Color.argb(128, 0,255,0));
                 }
                 else{
-                    bitmap.setPixel(width,height,Color.argb(255, 0,0,255));
+                    bitmap.setPixel(width,height,Color.argb(128, 0,0,255));
                 }
             }
         }
-
-//        bitmap.copyPixelsFromBuffer(buffer);
-
-//        Bitmap bitmap = BitmapFactory.decodeByteArray(imageBytes,0,imageBytes.length);
         return bitmap;
+//        return Bitmap.createScaledBitmap(bitmap,1600,900,false);
     }
 
 
