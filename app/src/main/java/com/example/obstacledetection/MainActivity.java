@@ -10,16 +10,19 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.media.Image;
 import android.os.Bundle;
+import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -115,10 +118,8 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 
         outer_frame_layout = findViewById(R.id.outer_frame_layout);
         this.custom_imageview = new ImageView(this);
-//        this.custom_imageview.setImageResource(R.mipmap.ic_launcher);
-        this.custom_imageview.setRotation(90);
-//        this.custom_imageview.setLayoutParams(new FrameLayout.LayoutParams(900,1600));
         outer_frame_layout.addView(this.custom_imageview);
+
     }
 
     @Override
@@ -161,7 +162,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
                 }
             }
             else{
-                int debugdistance = getMillimetersDepth(depthImage, 80,45);
+//                int debugdistance = getMillimetersDepth(depthImage, 80,45);
 //                this.testText.setText(Integer.toString(debugdistance));
                 this.custom_imageview.setImageBitmap(ImageToBitmap(depthImage));
 
@@ -204,14 +205,15 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     public Bitmap ImageToBitmap(Image depthImage) {
         // The depth image has a single plane, which stores depth for each
         // pixel as 16-bit unsigned integers.
+
         Image.Plane plane = depthImage.getPlanes()[0];
         ByteBuffer buffer = plane.getBuffer().order(ByteOrder.nativeOrder());
 
-        Bitmap bitmap = Bitmap.createBitmap(160, 90, Bitmap.Config.ARGB_8888);
+        Bitmap bitmap = Bitmap.createBitmap(depthImage.getWidth(), depthImage.getHeight(), Bitmap.Config.ARGB_8888);
         int byteIndex, dist;
 
-        for(int height=0;height<90; height++){
-            for(int width=0; width<160;width++){
+        for(int height=0;height<depthImage.getHeight(); height++){
+            for(int width=0; width<depthImage.getWidth();width++){
                 byteIndex = width * plane.getPixelStride() + height * plane.getRowStride();
                 dist = buffer.getShort(byteIndex);
                 if(dist<1000){
@@ -225,8 +227,10 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
                 }
             }
         }
-        return bitmap;
-//        return Bitmap.createScaledBitmap(bitmap,1600,900,false);
+        //rotate 90 degrees because depthImage is in landscape mode
+        Matrix matrix = new Matrix();
+        matrix.postRotate(90);
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
     }
 
 
