@@ -19,10 +19,12 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.CompoundButton;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -56,6 +58,8 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     private TextView[][] text_array;
     private FrameLayout outer_frame_layout;
     private ImageView custom_imageview;
+    private Switch depthSwitch;
+    private boolean depthMap=false;
 
     private void buildModel() {
         ViewRenderable.builder()
@@ -99,7 +103,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         }
         buildModel();
 
-        this.text_array = new TextView[4][4];
+        this.text_array = new TextView[4][3];
         this.text_array[0][0] = findViewById(R.id.text00);
         this.text_array[0][1] = findViewById(R.id.text01);
         this.text_array[0][2] = findViewById(R.id.text02);
@@ -119,6 +123,16 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         outer_frame_layout = findViewById(R.id.outer_frame_layout);
         this.custom_imageview = new ImageView(this);
         outer_frame_layout.addView(this.custom_imageview);
+        this.depthSwitch = findViewById(R.id.depthSwitch);
+        this.depthSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                depthMap = b;
+                if(!b){
+                    custom_imageview.setImageBitmap(null);
+                }
+            }
+        });
 
     }
 
@@ -153,19 +167,14 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         try {
             depthImage = frame.acquireDepthImage16Bits(); //160*90
             // Use the depth image here.
-            if(depthImage == null){
-//                Toast.makeText(this, "depthImage Null", Toast.LENGTH_LONG).show();
-                for(int i=0;i<4;i++){
-                    for(int j=0;j<4;j++){
-                        this.text_array[i][j].setText("Null");
-                    }
-                }
-            }
-            else{
-//                int debugdistance = getMillimetersDepth(depthImage, 80,45);
-//                this.testText.setText(Integer.toString(debugdistance));
-                this.custom_imageview.setImageBitmap(ImageToBitmap(depthImage));
 
+            if(depthMap) this.custom_imageview.setImageBitmap(ImageToBitmap(depthImage));
+
+            int[][] dist_matrix = getAverageDistances(depthImage,4,3);
+            for(int i=0;i<4;i++){
+                for(int j=0;j<3;j++){
+                    this.text_array[i][j].setText(Integer.toString(dist_matrix[i][j]));
+                }
             }
         } catch (NotYetAvailableException e) {
             // This means that depth data is not available yet.
@@ -173,6 +182,12 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             // feature points. This can happen when there is no motion, or when the
             // camera loses its ability to track objects in the surrounding
             // environment.
+            for(int i=0;i<4;i++){
+                for(int j=0;j<3;j++){
+                    this.text_array[i][j].setText("Null");
+                }
+            }
+
         } finally {
             if (depthImage != null) {
                 depthImage.close();
@@ -210,7 +225,8 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         ByteBuffer buffer = plane.getBuffer().order(ByteOrder.nativeOrder());
 
         Bitmap bitmap = Bitmap.createBitmap(depthImage.getWidth(), depthImage.getHeight(), Bitmap.Config.ARGB_8888);
-        int byteIndex, dist;
+        int byteIndex;
+        short dist;
 
         for(int height=0;height<depthImage.getHeight(); height++){
             for(int width=0; width<depthImage.getWidth();width++){
@@ -233,5 +249,34 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
     }
 
+    public int getAverageSubImageDist(Image depthImage, int heightstart, int heightend, int widthstart, int widthend){
+        //starts inclusive, ends not inclusive
+        Image.Plane plane = depthImage.getPlanes()[0];
+        ByteBuffer buffer = plane.getBuffer().order(ByteOrder.nativeOrder());
+        int byteIndex, dist, mean_value=0;
+
+        for(int height=heightstart;height<heightend; height++){
+            for(int width=widthstart; width<widthend;width++){
+                byteIndex = width * plane.getPixelStride() + height * plane.getRowStride();
+                dist = buffer.getShort(byteIndex);
+                mean_value += dist;
+            }
+        }
+        return mean_value/((heightend-heightstart)*(widthend-widthstart));
+    }
+
+    public int[][] getAverageDistances(Image depthImage, int rows, int cols){
+        int [][] distance_matrix = new int[rows][cols];
+
+        int height_increment = depthImage.getHeight()/cols;//Image needs to be rotated 90 degrees so use cols instead of rows here
+        int width_increment = depthImage.getHeight()/rows;
+
+        for(int i=0; i<rows;i++){
+            for(int j=0;j<cols;j++){
+                distance_matrix[i][cols-j-1] = getAverageSubImageDist(depthImage,j*height_increment,(j+1)*height_increment,i*width_increment,(i+1)*width_increment);
+            }
+        }
+        return distance_matrix;
+    }
 
 }

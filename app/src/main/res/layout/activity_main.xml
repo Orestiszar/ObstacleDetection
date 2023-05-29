@@ -159,4 +159,13 @@
 
         </LinearLayout>
     </LinearLayout>
+
+    <Switch
+        android:id="@+id/depthSwitch"
+        android:layout_width="126dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:minHeight="40dp"
+        android:text="Depth Map" />
+
 </FrameLayout>
