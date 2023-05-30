@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentOnAttachListener;
+import androidx.fragment.app.FragmentTransaction;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -48,6 +49,8 @@ import com.google.ar.sceneform.ux.BaseArFragment;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Collection;
+import java.util.Timer;
+import java.util.TimerTask;
 
 
 public class MainActivity extends AppCompatActivity implements FragmentOnAttachListener, BaseArFragment.OnTapArPlaneListener, BaseArFragment.OnSessionConfigurationListener, ArFragment.OnViewCreatedListener{
@@ -60,6 +63,9 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     private ImageView custom_imageview;
     private Switch depthSwitch;
     private boolean depthMap=false;
+    private int[][] dist_matrix;
+    private Timer timer;
+    private TimerTask timerTask;
 
     private void buildModel() {
         ViewRenderable.builder()
@@ -124,15 +130,20 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         this.custom_imageview = new ImageView(this);
         outer_frame_layout.addView(this.custom_imageview);
         this.depthSwitch = findViewById(R.id.depthSwitch);
-        this.depthSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+
+        this.depthSwitch.setOnCheckedChangeListener((CompoundButton compoundButton, boolean b)->{
+            depthMap = b;
+            if(!b){
+                custom_imageview.setImageBitmap(null);
+            }});
+
+        timer = new Timer("frame_timer");
+        timerTask = new TimerTask() {
             @Override
-            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                depthMap = b;
-                if(!b){
-                    custom_imageview.setImageBitmap(null);
-                }
+            public void run() {
+                runOnUiThread(()->onSceneUpdate());
             }
-        });
+        };
 
     }
 
@@ -158,22 +169,31 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         this.arSceneView = arSceneView;
         arFragment.setOnViewCreatedListener(null);
         this.arSceneView.setFrameRateFactor(SceneView.FrameRate.FULL);
-        this.arSceneView.getScene().addOnUpdateListener(this::onSceneUpdate);
+//        this.arSceneView.getScene().addOnUpdateListener(this::onSceneUpdate);
+        this.arSceneView.getPlaneRenderer().setEnabled(false);
+        try {
+            this.timer.schedule(this.timerTask,2000,100);
+        }
+        catch (Exception e){
+            e.printStackTrace();
+            System.exit(0);
+        }
+
     }
 
-    private void onSceneUpdate(FrameTime updatedTime) {
+    public void onSceneUpdate() {
         Image depthImage = null;
         Frame frame = this.arSceneView.getArFrame();
         try {
             depthImage = frame.acquireDepthImage16Bits(); //160*90
             // Use the depth image here.
 
-            if(depthMap) this.custom_imageview.setImageBitmap(ImageToBitmap(depthImage));
+            if(this.depthMap) this.custom_imageview.setImageBitmap(ImageToBitmap(depthImage));
 
-            int[][] dist_matrix = getAverageDistances(depthImage,4,3);
+            this.dist_matrix = getAverageDistances(depthImage,4,3);
             for(int i=0;i<4;i++){
                 for(int j=0;j<3;j++){
-                    this.text_array[i][j].setText(Integer.toString(dist_matrix[i][j]));
+                    this.text_array[i][j].setText(Integer.toString(this.dist_matrix[i][j]));
                 }
             }
         } catch (NotYetAvailableException e) {
