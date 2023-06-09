@@ -20,6 +20,8 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.CompoundButton;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -46,6 +48,8 @@ import com.google.ar.sceneform.rendering.ViewRenderable;
 import com.google.ar.sceneform.ux.ArFragment;
 import com.google.ar.sceneform.ux.BaseArFragment;
 
+import org.w3c.dom.Text;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Collection;
@@ -66,6 +70,8 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     private int[][] dist_matrix;
     private Timer timer;
     private TimerTask timerTask;
+    private final int numLabelRows=4;
+    private final int numLabelCols=3;
 
     private void buildModel() {
         ViewRenderable.builder()
@@ -109,28 +115,29 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         }
         buildModel();
 
-        this.text_array = new TextView[4][3];
-        this.text_array[0][0] = findViewById(R.id.text00);
-        this.text_array[0][1] = findViewById(R.id.text01);
-        this.text_array[0][2] = findViewById(R.id.text02);
-
-        this.text_array[1][0] = findViewById(R.id.text10);
-        this.text_array[1][1] = findViewById(R.id.text11);
-        this.text_array[1][2] = findViewById(R.id.text12);
-
-        this.text_array[2][0] = findViewById(R.id.text20);
-        this.text_array[2][1] = findViewById(R.id.text21);
-        this.text_array[2][2] = findViewById(R.id.text22);
-
-        this.text_array[3][0] = findViewById(R.id.text30);
-        this.text_array[3][1] = findViewById(R.id.text31);
-        this.text_array[3][2] = findViewById(R.id.text32);
+        this.text_array = new TextView[this.numLabelRows][this.numLabelCols];
+//        this.text_array[0][0] = findViewById(R.id.text00);
+//        this.text_array[0][1] = findViewById(R.id.text01);
+//        this.text_array[0][2] = findViewById(R.id.text02);
+//
+//        this.text_array[1][0] = findViewById(R.id.text10);
+//        this.text_array[1][1] = findViewById(R.id.text11);
+//        this.text_array[1][2] = findViewById(R.id.text12);
+//
+//        this.text_array[2][0] = findViewById(R.id.text20);
+//        this.text_array[2][1] = findViewById(R.id.text21);
+//        this.text_array[2][2] = findViewById(R.id.text22);
+//
+//        this.text_array[3][0] = findViewById(R.id.text30);
+//        this.text_array[3][1] = findViewById(R.id.text31);
+//        this.text_array[3][2] = findViewById(R.id.text32);
 
         outer_frame_layout = findViewById(R.id.outer_frame_layout);
+
         this.custom_imageview = new ImageView(this);
         outer_frame_layout.addView(this.custom_imageview);
-        this.depthSwitch = findViewById(R.id.depthSwitch);
 
+        this.depthSwitch = findViewById(R.id.depthSwitch);
         this.depthSwitch.setOnCheckedChangeListener((CompoundButton compoundButton, boolean b)->{
             depthMap = b;
             if(!b){
@@ -169,8 +176,9 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         this.arSceneView = arSceneView;
         arFragment.setOnViewCreatedListener(null);
         this.arSceneView.setFrameRateFactor(SceneView.FrameRate.FULL);
-//        this.arSceneView.getScene().addOnUpdateListener(this::onSceneUpdate);
+        this.arSceneView.getScene().addOnUpdateListener(this::createLabelGrid);
         this.arSceneView.getPlaneRenderer().setEnabled(false);
+        this.arSceneView.getPlaneRenderer().setVisible(false);
         try {
             this.timer.schedule(this.timerTask,2000,100);
         }
@@ -178,7 +186,55 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             e.printStackTrace();
             System.exit(0);
         }
+    }
 
+    public void createLabelGrid(FrameTime frametime){
+        Image depthImage = null;
+        Frame frame = this.arSceneView.getArFrame();
+        try{
+            depthImage = frame.acquireDepthImage16Bits(); //160*90
+            int imageHeight = depthImage.getWidth();
+            int imageWidth = depthImage.getHeight();//must me in reverse as we opt for portrait mode
+            int imageViewHeight = this.custom_imageview.getHeight();
+            int imageViewWidth = this.custom_imageview.getWidth();
+            float aspectRatio = (float) imageWidth / imageHeight;
+            int newWidth,newHeight;
+            if (imageViewWidth / (float) imageWidth < imageViewHeight / (float) imageHeight) {
+                newWidth = imageViewWidth;
+                newHeight = (int) (newWidth / aspectRatio);
+            } else {
+                newHeight = imageViewHeight;
+                newWidth = (int) (newHeight * aspectRatio);
+            }
+            // new width and new height are the dimensions of the screen that the labels need to represent. The ImageView is set to fit center.
+            int horizontalStep = newWidth/this.numLabelCols;
+            int verticalStep = newHeight/this.numLabelRows;
+
+            for(int i=0; i<numLabelRows;i++){
+                for(int j=0;j<numLabelCols;j++){
+                    if(this.text_array[i][j]!=null) continue;
+                    this.text_array[i][j] = new TextView(this);
+                    FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT);
+                    params.topMargin = (verticalStep*i)+ (verticalStep/3) + ((imageViewHeight-newHeight)/2);       // Set the top margin in pixels
+                    params.leftMargin = (horizontalStep*j) + horizontalStep/4 + ((imageViewWidth-newWidth)/2);  // Set the left margin in pixels
+                    this.text_array[i][j].setTextSize(34);
+                    this.text_array[i][j].setLayoutParams(params);
+                    outer_frame_layout.addView(this.text_array[i][j]);
+                }
+            }
+            // Remove the listener once the labels are positioned
+            this.arSceneView.getScene().removeOnUpdateListener(this::createLabelGrid);
+        }
+        catch (NotYetAvailableException e){
+
+        }
+        finally {
+            if (depthImage != null) {
+                depthImage.close();
+            }
+        }
     }
 
     public void onSceneUpdate() {
@@ -190,9 +246,9 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 
             if(this.depthMap) this.custom_imageview.setImageBitmap(ImageToBitmap(depthImage));
 
-            this.dist_matrix = getAverageDistances(depthImage,4,3);
-            for(int i=0;i<4;i++){
-                for(int j=0;j<3;j++){
+            this.dist_matrix = getAverageDistances(depthImage,this.numLabelRows,this.numLabelCols);
+            for(int i=0;i<this.numLabelRows;i++){
+                for(int j=0;j<this.numLabelCols;j++){
                     this.text_array[i][j].setText(Integer.toString(this.dist_matrix[i][j]));
                 }
             }
@@ -202,9 +258,9 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             // feature points. This can happen when there is no motion, or when the
             // camera loses its ability to track objects in the surrounding
             // environment.
-            for(int i=0;i<4;i++){
-                for(int j=0;j<3;j++){
-                    this.text_array[i][j].setText("Null");
+            for(int i=0;i<this.numLabelRows;i++){
+                for(int j=0;j<this.numLabelCols;j++){
+                    if(this.text_array[i][j]!=null) this.text_array[i][j].setText("Null");
                 }
             }
 
