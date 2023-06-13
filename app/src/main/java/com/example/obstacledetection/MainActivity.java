@@ -73,34 +73,6 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     private final int numLabelRows=4;
     private final int numLabelCols=3;
 
-    private void buildModel() {
-        ViewRenderable.builder()
-                .setView(this, createArTile(title, getApplicationContext()))
-                .build()
-                .thenAccept(viewRenderable -> this.viewRenderable = viewRenderable)
-                .exceptionally(throwable -> {
-                    throwable.printStackTrace();
-                    Log.d("ERR", throwable.toString());
-                    Toast.makeText(this, "Unable to load model", Toast.LENGTH_LONG).show();
-                    return null;
-                });
-    }
-
-
-    public View createArTile(String title, Context context) {
-        LinearLayout linearLayout = new LinearLayout(context);
-        linearLayout.setBackgroundResource(R.drawable.rounded_border);
-        linearLayout.setOrientation(LinearLayout.VERTICAL);
-        linearLayout.setPadding(8, 8, 8, 8);
-        TextView view = new TextView(context);
-        view.setText(title);
-        view.setTextSize(18);
-        view.setTextColor(Color.RED);
-        view.setPadding(8, 8, 8, 8);
-        linearLayout.addView(view);
-        return linearLayout;
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -113,24 +85,6 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
                         .commit();
             }
         }
-        buildModel();
-
-        this.text_array = new TextView[this.numLabelRows][this.numLabelCols];
-//        this.text_array[0][0] = findViewById(R.id.text00);
-//        this.text_array[0][1] = findViewById(R.id.text01);
-//        this.text_array[0][2] = findViewById(R.id.text02);
-//
-//        this.text_array[1][0] = findViewById(R.id.text10);
-//        this.text_array[1][1] = findViewById(R.id.text11);
-//        this.text_array[1][2] = findViewById(R.id.text12);
-//
-//        this.text_array[2][0] = findViewById(R.id.text20);
-//        this.text_array[2][1] = findViewById(R.id.text21);
-//        this.text_array[2][2] = findViewById(R.id.text22);
-//
-//        this.text_array[3][0] = findViewById(R.id.text30);
-//        this.text_array[3][1] = findViewById(R.id.text31);
-//        this.text_array[3][2] = findViewById(R.id.text32);
 
         outer_frame_layout = findViewById(R.id.outer_frame_layout);
 
@@ -174,9 +128,8 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     @Override
     public void onViewCreated(ArSceneView arSceneView) {
         this.arSceneView = arSceneView;
-        arFragment.setOnViewCreatedListener(null);
+        this.arFragment.setOnViewCreatedListener(null);
         this.arSceneView.setFrameRateFactor(SceneView.FrameRate.FULL);
-        this.arSceneView.getScene().addOnUpdateListener(this::createLabelGrid);
         this.arSceneView.getPlaneRenderer().setEnabled(false);
         this.arSceneView.getPlaneRenderer().setVisible(false);
         try {
@@ -184,11 +137,11 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         }
         catch (Exception e){
             e.printStackTrace();
-            System.exit(0);
+            System.exit(-1);
         }
     }
 
-    public void createLabelGrid(FrameTime frametime){
+    public void createLabelGrid(){
         Image depthImage = null;
         Frame frame = this.arSceneView.getArFrame();
         try{
@@ -209,7 +162,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             // new width and new height are the dimensions of the screen that the labels need to represent. The ImageView is set to fit center.
             int horizontalStep = newWidth/this.numLabelCols;
             int verticalStep = newHeight/this.numLabelRows;
-
+            this.text_array = new TextView[this.numLabelRows][this.numLabelCols];
             for(int i=0; i<numLabelRows;i++){
                 for(int j=0;j<numLabelCols;j++){
                     if(this.text_array[i][j]!=null) continue;
@@ -224,11 +177,9 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
                     outer_frame_layout.addView(this.text_array[i][j]);
                 }
             }
-            // Remove the listener once the labels are positioned
-            this.arSceneView.getScene().removeOnUpdateListener(this::createLabelGrid);
         }
         catch (NotYetAvailableException e){
-
+            this.text_array=null;
         }
         finally {
             if (depthImage != null) {
@@ -240,6 +191,10 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     public void onSceneUpdate() {
         Image depthImage = null;
         Frame frame = this.arSceneView.getArFrame();
+        if(this.text_array==null){
+            createLabelGrid();
+            return;//to ensure that labels are created
+        }
         try {
             depthImage = frame.acquireDepthImage16Bits(); //160*90
             // Use the depth image here.
@@ -260,7 +215,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             // environment.
             for(int i=0;i<this.numLabelRows;i++){
                 for(int j=0;j<this.numLabelCols;j++){
-                    if(this.text_array[i][j]!=null) this.text_array[i][j].setText("Null");
+                    this.text_array[i][j].setText("Null");
                 }
             }
 
