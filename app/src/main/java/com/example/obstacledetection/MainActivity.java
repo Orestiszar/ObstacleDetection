@@ -285,7 +285,6 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         Image.Plane plane = depthImage.getPlanes()[0];
         ByteBuffer buffer = plane.getBuffer().order(ByteOrder.nativeOrder());
         int byteIndex, dist, mean_value=0;
-
         for(int height=heightstart;height<heightend; height++){
             for(int width=widthstart; width<widthend;width++){
                 byteIndex = width * plane.getPixelStride() + height * plane.getRowStride();
@@ -300,9 +299,9 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         int [][] distance_matrix = new int[rows][cols];
 
         int height_increment = depthImage.getHeight()/cols;//Image needs to be rotated 90 degrees so use cols instead of rows here
-        int width_increment = depthImage.getHeight()/rows;
+        int width_increment = depthImage.getWidth()/rows;
 
-        for(int i=0; i<rows;i++){
+        for(int i=0; i<rows;i++){//assume the image is horizontal
             for(int j=0;j<cols;j++){
                 distance_matrix[i][cols-j-1] = getAverageSubImageDist(depthImage,j*height_increment,(j+1)*height_increment,i*width_increment,(i+1)*width_increment);
             }
