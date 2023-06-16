@@ -172,7 +172,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
                             ViewGroup.LayoutParams.WRAP_CONTENT);
                     params.topMargin = (verticalStep*i)+ (verticalStep/3) + ((imageViewHeight-newHeight)/2);       // Set the top margin in pixels
                     params.leftMargin = (horizontalStep*j) + horizontalStep/4 + ((imageViewWidth-newWidth)/2);  // Set the left margin in pixels
-                    this.text_array[i][j].setTextSize(34);
+                    this.text_array[i][j].setTextSize(24);
                     this.text_array[i][j].setLayoutParams(params);
                     outer_frame_layout.addView(this.text_array[i][j]);
                 }
@@ -263,10 +263,10 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             for(int width=0; width<depthImage.getWidth();width++){
                 byteIndex = width * plane.getPixelStride() + height * plane.getRowStride();
                 dist = buffer.getShort(byteIndex);
-                if(dist<1000){
+                if(dist>=0 && dist<6000){
                     bitmap.setPixel(width,height,Color.argb(128, 255,0,0));
                 }
-                else if(dist>1000 && dist<2000){
+                else if(dist>=6000 && dist<10000){
                     bitmap.setPixel(width,height,Color.argb(128, 0,255,0));
                 }
                 else{
