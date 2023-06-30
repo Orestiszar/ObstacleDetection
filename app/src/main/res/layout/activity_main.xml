@@ -168,4 +168,12 @@
         android:minHeight="40dp"
         android:text="Depth Map" />
 
+    <TextView
+        android:id="@+id/gyrotext"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="400px"
+        android:text="TextView"
+        android:textSize="24sp" />
+
 </FrameLayout>

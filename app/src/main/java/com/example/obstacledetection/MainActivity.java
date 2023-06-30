@@ -1,5 +1,7 @@
 package com.example.obstacledetection;
 
+import static android.content.ContentValues.TAG;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
@@ -14,6 +16,10 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.media.Image;
 import android.os.Bundle;
 import android.util.AttributeSet;
@@ -53,11 +59,12 @@ import org.w3c.dom.Text;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Collection;
+import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
 
 
-public class MainActivity extends AppCompatActivity implements FragmentOnAttachListener, BaseArFragment.OnTapArPlaneListener, BaseArFragment.OnSessionConfigurationListener, ArFragment.OnViewCreatedListener{
+public class MainActivity extends AppCompatActivity implements SensorEventListener,FragmentOnAttachListener, BaseArFragment.OnTapArPlaneListener, BaseArFragment.OnSessionConfigurationListener, ArFragment.OnViewCreatedListener{
     private ArFragment arFragment;
     private ViewRenderable viewRenderable;
     private String title = "Anchor";
@@ -73,6 +80,74 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     private final int numLabelRows=4;
     private final int numLabelCols=3;
 
+    private TextView gyrotext;
+    private SensorManager sensorManager;
+    private Sensor accelerometer;
+    private Sensor magneticField;
+    private float[] accelerometerReading = new float[3];
+    private float[] magnetometerReading = new float[3];
+    private float[] rotationMatrix = new float[9];
+    private float[] orientationAngles = new float[3];
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            System.arraycopy(event.values, 0, accelerometerReading,
+                    0, accelerometerReading.length);
+        } else if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
+            System.arraycopy(event.values, 0, magnetometerReading,
+                    0, magnetometerReading.length);
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int i) {
+
+    }
+
+    public void updateOrientationAngles() {
+        // Compute the three orientation angles based on the most recent readings from
+        // the device's accelerometer and magnetometer.
+        // Update rotation matrix, which is needed to update orientation angles.
+        SensorManager.getRotationMatrix(rotationMatrix, null,
+                accelerometerReading, magnetometerReading);
+
+        // "rotationMatrix" now has up-to-date information.
+        SensorManager.getOrientation(rotationMatrix, orientationAngles);
+        // "orientationAngles" now has up-to-date information.
+
+        for(int i = 0; i < 3; i++) {
+            orientationAngles[i] = (float)(Math.toDegrees(orientationAngles[i]));
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Get updates from the accelerometer and magnetometer at a constant rate.
+        // To make batch operations more efficient and reduce power consumption,
+        // provide support for delaying updates to the application.
+        //
+        // In this example, the sensor reporting delay is small enough such that
+        // the application receives an update before the system checks the sensor
+        // readings again.
+        if (accelerometer != null) {
+            sensorManager.registerListener(this, accelerometer,
+                    SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
+        }
+        if (magneticField != null) {
+            sensorManager.registerListener(this, magneticField,
+                    SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Don't receive any more updates from either sensor.
+        sensorManager.unregisterListener(this);
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -85,6 +160,19 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
                         .commit();
             }
         }
+
+        sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        if(accelerometer == null) {
+            Log.e(TAG, "Accelerometer not available.");
+            finish(); // Close app
+        }
+        magneticField = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+        if(magneticField == null) {
+            Log.e(TAG, "Magnetometer not available.");
+            finish(); // Close app
+        }
+        gyrotext = findViewById(R.id.gyrotext);
 
         outer_frame_layout = findViewById(R.id.outer_frame_layout);
 
@@ -191,6 +279,10 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     public void onSceneUpdate() {
         Image depthImage = null;
         Frame frame = this.arSceneView.getArFrame();
+        updateOrientationAngles();
+
+        gyrotext.setText(String.format(Locale.getDefault(),"x: %d \ny: %d\n z: %d", Math.round(orientationAngles[0]),Math.round(orientationAngles[1]),Math.round(orientationAngles[2])));
+
         if(this.text_array==null){
             createLabelGrid();
             return;//to ensure that labels are created
@@ -257,7 +349,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 
         Bitmap bitmap = Bitmap.createBitmap(depthImage.getWidth(), depthImage.getHeight(), Bitmap.Config.ARGB_8888);
         int byteIndex;
-        short dist;
+        int dist;
 
         for(int height=0;height<depthImage.getHeight(); height++){
             for(int width=0; width<depthImage.getWidth();width++){
@@ -308,5 +400,4 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         }
         return distance_matrix;
     }
-
 }
