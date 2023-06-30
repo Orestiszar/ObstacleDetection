@@ -84,10 +84,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private SensorManager sensorManager;
     private Sensor accelerometer;
     private Sensor magneticField;
-    private float[] accelerometerReading = new float[3];
-    private float[] magnetometerReading = new float[3];
-    private float[] rotationMatrix = new float[9];
-    private float[] orientationAngles = new float[3];
+    private final float[] accelerometerReading = new float[3];
+    private final float[] magnetometerReading = new float[3];
+    private final float[] rotationMatrix = new float[9];
+    private final float[] orientationAngles = new float[3];
 
     @Override
     public void onSensorChanged(SensorEvent event) {
