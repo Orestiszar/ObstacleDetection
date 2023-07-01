@@ -1,6 +1,8 @@
 package com.example.obstacledetection;
 
 import static android.content.ContentValues.TAG;
+import static android.hardware.SensorManager.AXIS_X;
+import static android.hardware.SensorManager.AXIS_Z;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -87,6 +89,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private final float[] accelerometerReading = new float[3];
     private final float[] magnetometerReading = new float[3];
     private final float[] rotationMatrix = new float[9];
+    private final float[] rotationMatrixRemapped = new float[9];
     private final float[] orientationAngles = new float[3];
 
     @Override
@@ -111,9 +114,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // Update rotation matrix, which is needed to update orientation angles.
         SensorManager.getRotationMatrix(rotationMatrix, null,
                 accelerometerReading, magnetometerReading);
-
         // "rotationMatrix" now has up-to-date information.
-        SensorManager.getOrientation(rotationMatrix, orientationAngles);
+
+        //Change coordinate system
+        SensorManager.remapCoordinateSystem(rotationMatrix, AXIS_X, AXIS_Z, rotationMatrixRemapped);
+
+        SensorManager.getOrientation(rotationMatrixRemapped, orientationAngles);
         // "orientationAngles" now has up-to-date information.
 
         for(int i = 0; i < 3; i++) {
@@ -125,12 +131,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     protected void onResume() {
         super.onResume();
         // Get updates from the accelerometer and magnetometer at a constant rate.
-        // To make batch operations more efficient and reduce power consumption,
-        // provide support for delaying updates to the application.
-        //
-        // In this example, the sensor reporting delay is small enough such that
-        // the application receives an update before the system checks the sensor
-        // readings again.
         if (accelerometer != null) {
             sensorManager.registerListener(this, accelerometer,
                     SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
