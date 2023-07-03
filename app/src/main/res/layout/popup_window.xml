@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="#A0A0A0">
+
+    <EditText
+        android:id="@+id/lowBoundET"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="50sp"
+        android:layout_marginEnd="50sp"
+        android:ems="10"
+        android:inputType="number"/>
+
+    <EditText
+        android:id="@+id/highBoundET"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="50sp"
+        android:layout_marginEnd="50sp"
+        android:layout_marginTop="50sp"
+        android:ems="10"
+        android:inputType="number"/>
+
+    <Button
+        android:id="@+id/setPopupParamsButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="100sp"
+        android:layout_marginStart="110sp"
+        android:text="Set"
+        android:textSize="18sp" />
+
+
+</RelativeLayout>

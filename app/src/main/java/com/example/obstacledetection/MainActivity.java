@@ -24,16 +24,23 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.media.Image;
 import android.os.Bundle;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
+import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.PopupWindow;
 import android.widget.RelativeLayout;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -81,6 +88,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private TimerTask timerTask;
     private final int numLabelRows=4;
     private final int numLabelCols=3;
+    private final int timerPeriod = 333;
+    private int lowbound=6000,highbound=10000;
 
     private TextView gyrotext;
     private SensorManager sensorManager;
@@ -91,6 +100,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private final float[] rotationMatrix = new float[9];
     private final float[] rotationMatrixRemapped = new float[9];
     private final float[] orientationAngles = new float[3];
+
+    private Vibrator vibrator;
+    private boolean isVibrating=false;
+
+    private Button settingsButton;
 
     @Override
     public void onSensorChanged(SensorEvent event) {
@@ -172,6 +186,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Log.e(TAG, "Magnetometer not available.");
             finish(); // Close app
         }
+
+        vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        if (!vibrator.hasVibrator()) {
+            Log.e(TAG, "Vibrator not available.");
+            finish(); // Close app
+        }
+
         gyrotext = findViewById(R.id.gyrotext);
 
         outer_frame_layout = findViewById(R.id.outer_frame_layout);
@@ -194,6 +215,37 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         };
 
+        settingsButton = findViewById(R.id.settingsButton);
+        settingsButton.setOnClickListener(this::inflatePopupMenu);
+    }
+
+    public void inflatePopupMenu(View view){
+        // inflate the layout of the popup window
+        LayoutInflater inflater = (LayoutInflater)getSystemService(LAYOUT_INFLATER_SERVICE);
+        View popupView = inflater.inflate(R.layout.popup_window, null);
+
+        // create the popup window
+        int width = LinearLayout.LayoutParams.WRAP_CONTENT;
+        int height = LinearLayout.LayoutParams.WRAP_CONTENT;
+        boolean focusable = true; // lets taps outside the popup also dismiss it
+        final PopupWindow popupWindow = new PopupWindow(popupView, width, height, focusable);
+        // show the popup window
+        // which view you pass in doesn't matter, it is only used for the window tolken
+        popupWindow.showAtLocation(view, Gravity.CENTER, 0, 0);
+
+        EditText lowBoundET = popupView.findViewById(R.id.lowBoundET);
+        EditText highBoundET = popupView.findViewById(R.id.highBoundET);
+        lowBoundET.setText(Integer.toString(lowbound));
+        highBoundET.setText(Integer.toString(highbound));
+        Button setButton = popupView.findViewById(R.id.setPopupParamsButton);
+        setButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                lowbound = Integer.parseInt(lowBoundET.getText().toString());
+                highbound = Integer.parseInt(highBoundET.getText().toString());
+                popupWindow.dismiss();
+            }
+        });
     }
 
     @Override
@@ -221,7 +273,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         this.arSceneView.getPlaneRenderer().setEnabled(false);
         this.arSceneView.getPlaneRenderer().setVisible(false);
         try {
-            this.timer.schedule(this.timerTask,2000,100);
+            this.timer.schedule(this.timerTask,2000,timerPeriod);
         }
         catch (Exception e){
             e.printStackTrace();
@@ -277,11 +329,24 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     public void onSceneUpdate() {
+        updateOrientationAngles();
+        gyrotext.setText(String.format(Locale.getDefault(),"x: %d \ny: %d\n z: %d", Math.round(orientationAngles[0]),Math.round(orientationAngles[1]),Math.round(orientationAngles[2])));
+        if(orientationAngles[1]>30 || orientationAngles[1]<-20 || Math.abs(orientationAngles[2])>20){
+            if(!isVibrating){
+                isVibrating=true;
+                vibrator.vibrate(VibrationEffect.createOneShot(1000,VibrationEffect.DEFAULT_AMPLITUDE));
+                for(int i=0;i<this.numLabelRows;i++){
+                    for(int j=0;j<this.numLabelCols;j++){
+                        this.text_array[i][j].setText("");
+                    }
+                }
+            }
+            return;
+        }
+        isVibrating = false;
+
         Image depthImage = null;
         Frame frame = this.arSceneView.getArFrame();
-        updateOrientationAngles();
-
-        gyrotext.setText(String.format(Locale.getDefault(),"x: %d \ny: %d\n z: %d", Math.round(orientationAngles[0]),Math.round(orientationAngles[1]),Math.round(orientationAngles[2])));
 
         if(this.text_array==null){
             createLabelGrid();
@@ -355,10 +420,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             for(int width=0; width<depthImage.getWidth();width++){
                 byteIndex = width * plane.getPixelStride() + height * plane.getRowStride();
                 dist = buffer.getShort(byteIndex);
-                if(dist>=0 && dist<6000){
+                if(dist>=0 && dist<lowbound){
                     bitmap.setPixel(width,height,Color.argb(128, 255,0,0));
                 }
-                else if(dist>=6000 && dist<10000){
+                else if(dist>=lowbound && dist<highbound){
                     bitmap.setPixel(width,height,Color.argb(128, 0,255,0));
                 }
                 else{
