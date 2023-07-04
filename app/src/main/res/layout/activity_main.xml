@@ -10,13 +10,6 @@
         android:id="@+id/arFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
-
-        <Button
-            android:id="@+id/settingsButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="300dp"
-            android:text="Button" />
     </FrameLayout>
 
 
@@ -35,5 +28,14 @@
         android:layout_marginStart="150dp"
         android:text="TextView"
         android:textSize="24sp" />
+
+    <ImageView
+        android:id="@+id/settingsButton"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginStart="300dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/settings_button"
+        android:clickable="true"/>
 
 </FrameLayout>

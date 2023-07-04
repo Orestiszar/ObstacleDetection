@@ -104,7 +104,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Vibrator vibrator;
     private boolean isVibrating=false;
 
-    private Button settingsButton;
+    private ImageView settingsButton;
 
     @Override
     public void onSensorChanged(SensorEvent event) {
@@ -329,6 +329,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     public void onSceneUpdate() {
+
+        if(this.text_array==null){
+            createLabelGrid();
+            return;//to ensure that labels are created
+        }
+
         updateOrientationAngles();
         gyrotext.setText(String.format(Locale.getDefault(),"x: %d \ny: %d\n z: %d", Math.round(orientationAngles[0]),Math.round(orientationAngles[1]),Math.round(orientationAngles[2])));
         if(orientationAngles[1]>30 || orientationAngles[1]<-20 || Math.abs(orientationAngles[2])>20){
@@ -340,6 +346,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         this.text_array[i][j].setText("");
                     }
                 }
+                this.text_array[1][0].setText("Παρακαλώ κρατήστε όρθια τη συσκευή");
+                this.text_array[1][0].setTextColor(Color.WHITE);
+
             }
             return;
         }
@@ -347,11 +356,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         Image depthImage = null;
         Frame frame = this.arSceneView.getArFrame();
-
-        if(this.text_array==null){
-            createLabelGrid();
-            return;//to ensure that labels are created
-        }
         try {
             depthImage = frame.acquireDepthImage16Bits(); //160*90
             // Use the depth image here.
@@ -362,6 +366,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             for(int i=0;i<this.numLabelRows;i++){
                 for(int j=0;j<this.numLabelCols;j++){
                     this.text_array[i][j].setText(Integer.toString(this.dist_matrix[i][j]));
+                    if(this.dist_matrix[i][j]<=lowbound) this.text_array[i][j].setTextColor(Color.RED);
+                    else this.text_array[i][j].setTextColor(Color.WHITE);
                 }
             }
         } catch (NotYetAvailableException e) {
@@ -373,6 +379,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             for(int i=0;i<this.numLabelRows;i++){
                 for(int j=0;j<this.numLabelCols;j++){
                     this.text_array[i][j].setText("Null");
+                    this.text_array[i][j].setTextColor(Color.WHITE);
                 }
             }
 
@@ -420,6 +427,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             for(int width=0; width<depthImage.getWidth();width++){
                 byteIndex = width * plane.getPixelStride() + height * plane.getRowStride();
                 dist = buffer.getShort(byteIndex);
+                if(dist<0) dist = 65536-dist;//to deal with overflowing due to signed shorts
                 if(dist>=0 && dist<lowbound){
                     bitmap.setPixel(width,height,Color.argb(128, 255,0,0));
                 }
@@ -446,6 +454,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             for(int width=widthstart; width<widthend;width++){
                 byteIndex = width * plane.getPixelStride() + height * plane.getRowStride();
                 dist = buffer.getShort(byteIndex);
+                if(dist<0) dist = 65536-dist;//to deal with overflowing due to signed shorts
                 mean_value += dist;
             }
         }
