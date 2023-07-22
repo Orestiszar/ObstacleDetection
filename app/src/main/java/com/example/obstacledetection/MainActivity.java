@@ -6,12 +6,16 @@ import static android.hardware.SensorManager.AXIS_Z;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentOnAttachListener;
 import androidx.fragment.app.FragmentTransaction;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -67,6 +71,7 @@ import org.w3c.dom.Text;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.security.PublicKey;
 import java.util.Collection;
 import java.util.Locale;
 import java.util.Timer;
@@ -90,6 +95,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private final int numLabelCols=3;
     private final int timerPeriod = 333;
     private int lowbound=6000,highbound=10000;
+    private int [] lowBoundArr = new int[] {6000,6000,2000,1000};
+    private int [] highBoundArr = new int[] {10000,10000,6000,6000};
 
     private TextView gyrotext;
     private SensorManager sensorManager;
@@ -141,9 +148,59 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     }
 
+    public void startTimer(int delay){
+        timer = new Timer("frame_timer");
+        timerTask = new TimerTask() {
+            @Override
+            public void run() {
+                runOnUiThread(()->onSceneUpdate());
+            }
+        };
+        try {
+            this.timer.schedule(this.timerTask,delay,timerPeriod);
+        }
+        catch (Exception e){
+            e.printStackTrace();
+            System.exit(-1);
+        }
+    }
+
+    public void stopTimer(){
+        try {
+            if(this.timer!=null){
+                this.timer.cancel();
+            }
+        }
+        catch (Exception e){
+            e.printStackTrace();
+            System.exit(-1);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (!CameraPermissionHelper.hasCameraPermission(this)) {
+            // Use toast instead of snackbar here since the activity will exit.
+            Toast.makeText(this, "Camera permission is needed to run this application", Toast.LENGTH_LONG)
+                    .show();
+            if (!CameraPermissionHelper.shouldShowRequestPermissionRationale(this)) {
+                // Permission denied with checking "Do not ask again".
+                CameraPermissionHelper.launchPermissionSettings(this);
+            }
+            finish();
+        }
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
+
+        if (!CameraPermissionHelper.hasCameraPermission(this)) {
+            return;
+        }
+        startTimer(2000);
+
         // Get updates from the accelerometer and magnetometer at a constant rate.
         if (accelerometer != null) {
             sensorManager.registerListener(this, accelerometer,
@@ -158,6 +215,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     protected void onPause() {
         super.onPause();
+        stopTimer();
         // Don't receive any more updates from either sensor.
         sensorManager.unregisterListener(this);
     }
@@ -207,19 +265,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 custom_imageview.setImageBitmap(null);
             }});
 
-        timer = new Timer("frame_timer");
-        timerTask = new TimerTask() {
-            @Override
-            public void run() {
-                runOnUiThread(()->onSceneUpdate());
-            }
-        };
 
         settingsButton = findViewById(R.id.settingsButton);
         settingsButton.setOnClickListener(this::inflatePopupMenu);
     }
 
     public void inflatePopupMenu(View view){
+        stopTimer();
         // inflate the layout of the popup window
         LayoutInflater inflater = (LayoutInflater)getSystemService(LAYOUT_INFLATER_SERVICE);
         View popupView = inflater.inflate(R.layout.popup_window, null);
@@ -233,16 +285,33 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // which view you pass in doesn't matter, it is only used for the window tolken
         popupWindow.showAtLocation(view, Gravity.CENTER, 0, 0);
 
-        EditText lowBoundET = popupView.findViewById(R.id.lowBoundET);
-        EditText highBoundET = popupView.findViewById(R.id.highBoundET);
-        lowBoundET.setText(Integer.toString(lowbound));
-        highBoundET.setText(Integer.toString(highbound));
+
+        EditText [][] ETArr = new EditText[4][2];
+        ETArr[0][0] = popupView.findViewById(R.id.EtLow0);
+        ETArr[1][0] = popupView.findViewById(R.id.EtLow1);
+        ETArr[2][0] = popupView.findViewById(R.id.EtLow2);
+        ETArr[3][0] = popupView.findViewById(R.id.EtLow3);
+
+        ETArr[0][1] = popupView.findViewById(R.id.EtHigh0);
+        ETArr[1][1] = popupView.findViewById(R.id.EtHigh1);
+        ETArr[2][1] = popupView.findViewById(R.id.EtHigh2);
+        ETArr[3][1] = popupView.findViewById(R.id.EtHigh3);
+
+        for(int i=0;i<4;i++) {
+            ETArr[i][0].setText(Integer.toString(lowBoundArr[i]));
+            ETArr[i][1].setText(Integer.toString(highBoundArr[i]));
+        }
+
         Button setButton = popupView.findViewById(R.id.setPopupParamsButton);
         setButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                lowbound = Integer.parseInt(lowBoundET.getText().toString());
-                highbound = Integer.parseInt(highBoundET.getText().toString());
+
+                for(int i=0;i<4;i++) {
+                    lowBoundArr[i] = Integer.parseInt(ETArr[i][0].getText().toString());
+                    highBoundArr[i] = Integer.parseInt(ETArr[i][1].getText().toString());
+                }
+                startTimer(0);
                 popupWindow.dismiss();
             }
         });
@@ -272,13 +341,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         this.arSceneView.setFrameRateFactor(SceneView.FrameRate.FULL);
         this.arSceneView.getPlaneRenderer().setEnabled(false);
         this.arSceneView.getPlaneRenderer().setVisible(false);
-        try {
-            this.timer.schedule(this.timerTask,2000,timerPeriod);
-        }
-        catch (Exception e){
-            e.printStackTrace();
-            System.exit(-1);
-        }
     }
 
     public void createLabelGrid(){
@@ -366,7 +428,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             for(int i=0;i<this.numLabelRows;i++){
                 for(int j=0;j<this.numLabelCols;j++){
                     this.text_array[i][j].setText(Integer.toString(this.dist_matrix[i][j]));
-                    if(this.dist_matrix[i][j]<=lowbound) this.text_array[i][j].setTextColor(Color.RED);
+                    if(this.dist_matrix[i][j]<=lowBoundArr[i]) this.text_array[i][j].setTextColor(Color.RED);
                     else this.text_array[i][j].setTextColor(Color.WHITE);
                 }
             }
@@ -402,16 +464,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         anchorNode.setRenderable(viewRenderable);
     }
 
-    /** Obtain the depth in millimeters for depthImage at coordinates (x, y). */
-    public int getMillimetersDepth(Image depthImage, int x, int y) {
-        // The depth image has a single plane, which stores depth for each
-        // pixel as 16-bit unsigned integers.
-        Image.Plane plane = depthImage.getPlanes()[0];
-        int byteIndex = x * plane.getPixelStride() + y * plane.getRowStride();
-        ByteBuffer buffer = plane.getBuffer().order(ByteOrder.nativeOrder());
-        return buffer.getShort(byteIndex);
-    }
-
     public Bitmap ImageToBitmap(Image depthImage) {
         // The depth image has a single plane, which stores depth for each
         // pixel as 16-bit unsigned integers.
@@ -422,16 +474,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         Bitmap bitmap = Bitmap.createBitmap(depthImage.getWidth(), depthImage.getHeight(), Bitmap.Config.ARGB_8888);
         int byteIndex;
         int dist;
+        int width_increment = depthImage.getWidth()/numLabelRows;
 
         for(int height=0;height<depthImage.getHeight(); height++){
             for(int width=0; width<depthImage.getWidth();width++){
                 byteIndex = width * plane.getPixelStride() + height * plane.getRowStride();
                 dist = buffer.getShort(byteIndex);
                 if(dist<0) dist = 65536-dist;//to deal with overflowing due to signed shorts
-                if(dist>=0 && dist<lowbound){
+                if(dist>=0 && dist<lowBoundArr[width/width_increment]){
                     bitmap.setPixel(width,height,Color.argb(128, 255,0,0));
                 }
-                else if(dist>=lowbound && dist<highbound){
+                else if(dist>=lowBoundArr[width/width_increment] && dist<highBoundArr[width/width_increment]){
                     bitmap.setPixel(width,height,Color.argb(128, 0,255,0));
                 }
                 else{
