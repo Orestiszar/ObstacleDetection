@@ -199,12 +199,14 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         ETArr[2][1] = popupView.findViewById(R.id.EtHigh2);
         ETArr[3][1] = popupView.findViewById(R.id.EtHigh3);
 
-        EditText dynamic_weight_ET = findViewById(R.id.EtDynamicWeight);
+        EditText dynamic_weight_ET = popupView.findViewById(R.id.EtDynamicWeight);
 
         for(int i=0;i<4;i++) {
             ETArr[i][0].setText(Integer.toString(lowBoundArr[i]));
             ETArr[i][1].setText(Integer.toString(highBoundArr[i]));
         }
+
+        dynamic_weight_ET.setText(Integer.toString(dynamic_weight));
 
         Button setButton = popupView.findViewById(R.id.setPopupParamsButton);
         setButton.setOnClickListener(new View.OnClickListener() {
