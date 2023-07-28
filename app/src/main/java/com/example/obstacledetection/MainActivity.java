@@ -61,6 +61,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     public final int numLabelCols=3;
     private int [] lowBoundArr = new int[] {6000,6000,2000,1000};
     private int [] highBoundArr = new int[] {10000,10000,6000,6000};
+    private int dynamic_weight = 0;
 
     private Timer timer;
     private TimerTask timerTask;
@@ -79,7 +80,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             }
         };
         try {
-            this.timer.schedule(this.timerTask,delay,timerPeriod);
+            timer.schedule(timerTask,delay,timerPeriod);
         }
         catch (Exception e){
             e.printStackTrace();
@@ -89,8 +90,8 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 
     public void stopTimer(){
         try {
-            if(this.timer!=null){
-                this.timer.cancel();
+            if(timer!=null){
+                timer.cancel();
             }
         }
         catch (Exception e){
@@ -156,11 +157,11 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 
         outer_frame_layout = findViewById(R.id.outer_frame_layout);
 
-        this.custom_imageview = new ImageView(this);
-        outer_frame_layout.addView(this.custom_imageview);
+        custom_imageview = new ImageView(this);
+        outer_frame_layout.addView(custom_imageview);
 
-        this.depthSwitch = findViewById(R.id.depthSwitch);
-        this.depthSwitch.setOnCheckedChangeListener((CompoundButton compoundButton, boolean b)->{
+        depthSwitch = findViewById(R.id.depthSwitch);
+        depthSwitch.setOnCheckedChangeListener((CompoundButton compoundButton, boolean b)->{
             depthMap = b;
             if(!b){
                 custom_imageview.setImageBitmap(null);
@@ -179,8 +180,9 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         // create the popup window
         int width = LinearLayout.LayoutParams.WRAP_CONTENT;
         int height = LinearLayout.LayoutParams.WRAP_CONTENT;
-        boolean focusable = false; // lets taps outside the popup also dismiss it
+        boolean focusable = true; // lets taps outside the popup also dismiss it
         final PopupWindow popupWindow = new PopupWindow(popupView, width, height, focusable);
+        popupWindow.setOnDismissListener(()->{startTimer(0);});
         // show the popup window
         // which view you pass in doesn't matter, it is only used for the window tolken
         popupWindow.showAtLocation(view, Gravity.CENTER, 0, 0);
@@ -197,6 +199,8 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         ETArr[2][1] = popupView.findViewById(R.id.EtHigh2);
         ETArr[3][1] = popupView.findViewById(R.id.EtHigh3);
 
+        EditText dynamic_weight_ET = findViewById(R.id.EtDynamicWeight);
+
         for(int i=0;i<4;i++) {
             ETArr[i][0].setText(Integer.toString(lowBoundArr[i]));
             ETArr[i][1].setText(Integer.toString(highBoundArr[i]));
@@ -211,7 +215,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
                     lowBoundArr[i] = Integer.parseInt(ETArr[i][0].getText().toString());
                     highBoundArr[i] = Integer.parseInt(ETArr[i][1].getText().toString());
                 }
-                startTimer(0);
+                dynamic_weight = Integer.parseInt(dynamic_weight_ET.getText().toString());
                 popupWindow.dismiss();
             }
         });
@@ -248,9 +252,9 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         try{
             depthImage = frame.acquireDepthImage16Bits(); //160*90
             int imageHeight = depthImage.getWidth();
-            int imageWidth = depthImage.getHeight();//must me in reverse as we opt for portrait mode
-            int imageViewHeight = this.custom_imageview.getHeight();
-            int imageViewWidth = this.custom_imageview.getWidth();
+            int imageWidth = depthImage.getHeight();//must be in reverse as we opt for portrait mode
+            int imageViewHeight = custom_imageview.getHeight();
+            int imageViewWidth = custom_imageview.getWidth();
             float aspectRatio = (float) imageWidth / imageHeight;
             int newWidth,newHeight;
             if (imageViewWidth / (float) imageWidth < imageViewHeight / (float) imageHeight) {
@@ -280,7 +284,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             }
         }
         catch (NotYetAvailableException e){
-            this.text_array=null;
+            text_array=null;
         }
         finally {
             if (depthImage != null) {
@@ -290,7 +294,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     }
 
     public void onSceneUpdate() {
-        if(this.text_array==null){
+        if(text_array==null){
             createLabelGrid();
             return;//Avoid reading from null array in the catch block
         }
@@ -304,19 +308,19 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         vibratorHelper.stopVibrating();
 
         Image depthImage = null;
-        Frame frame = this.arSceneView.getArFrame();
+        Frame frame = arSceneView.getArFrame();
         try {
             depthImage = frame.acquireDepthImage16Bits(); //160*90
             // Use the depth image here.
 
-            if(this.depthMap) this.custom_imageview.setImageBitmap(ImageToBitmap(depthImage));
+            if(depthMap) custom_imageview.setImageBitmap(ImageToBitmap(depthImage));
 
-            this.dist_matrix = getAverageDistances(depthImage,this.numLabelRows,this.numLabelCols);
-            for(int i=0;i<this.numLabelRows;i++){
-                for(int j=0;j<this.numLabelCols;j++){
-                    this.text_array[i][j].setText(Integer.toString(this.dist_matrix[i][j]));
-                    if(this.dist_matrix[i][j]<=lowBoundArr[i]) this.text_array[i][j].setTextColor(Color.RED);
-                    else this.text_array[i][j].setTextColor(Color.WHITE);
+            this.dist_matrix = getAverageDistances(depthImage,numLabelRows,numLabelCols);
+            for(int i=0;i<numLabelRows;i++){
+                for(int j=0;j<numLabelCols;j++){
+                    text_array[i][j].setText(Integer.toString(dist_matrix[i][j]));
+                    if(dist_matrix[i][j]<=lowBoundArr[i] + (dynamic_weight*sensorHelper.orientationAngles[1])) text_array[i][j].setTextColor(Color.RED);
+                    else text_array[i][j].setTextColor(Color.WHITE);
                 }
             }
         } catch (NotYetAvailableException e) {
@@ -325,10 +329,10 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             // feature points. This can happen when there is no motion, or when the
             // camera loses its ability to track objects in the surrounding
             // environment.
-            for(int i=0;i<this.numLabelRows;i++){
-                for(int j=0;j<this.numLabelCols;j++){
-                    this.text_array[i][j].setText("Null");
-                    this.text_array[i][j].setTextColor(Color.WHITE);
+            for(int i=0;i<numLabelRows;i++){
+                for(int j=0;j<numLabelCols;j++){
+                    text_array[i][j].setText("Null");
+                    text_array[i][j].setTextColor(Color.WHITE);
                 }
             }
 
