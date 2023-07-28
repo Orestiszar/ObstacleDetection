@@ -1,43 +1,22 @@
 package com.example.obstacledetection;
 
-import static android.content.ContentValues.TAG;
-import static android.hardware.SensorManager.AXIS_X;
-import static android.hardware.SensorManager.AXIS_Z;
-
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentOnAttachListener;
-import androidx.fragment.app.FragmentTransaction;
 
-import android.Manifest;
-import android.content.Context;
-import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Matrix;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
+
 import android.media.Image;
 import android.os.Bundle;
-import android.os.VibrationEffect;
-import android.os.Vibrator;
-import android.util.AttributeSet;
-import android.util.Log;
+
 import android.view.Gravity;
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.EditText;
@@ -45,108 +24,51 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
-import android.widget.RelativeLayout;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.ar.core.Anchor;
 import com.google.ar.core.Config;
 import com.google.ar.core.Frame;
-import com.google.ar.core.HitResult;
-import com.google.ar.core.Plane;
 import com.google.ar.core.Session;
 import com.google.ar.core.exceptions.NotYetAvailableException;
-import com.google.ar.sceneform.AnchorNode;
 import com.google.ar.sceneform.ArSceneView;
-import com.google.ar.sceneform.FrameTime;
 import com.google.ar.sceneform.SceneView;
 import com.google.ar.sceneform.Sceneform;
-import com.google.ar.sceneform.rendering.Renderable;
-import com.google.ar.sceneform.rendering.ViewRenderable;
 import com.google.ar.sceneform.ux.ArFragment;
 import com.google.ar.sceneform.ux.BaseArFragment;
 
-import org.w3c.dom.Text;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.security.PublicKey;
-import java.util.Collection;
 import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
 
 
-public class MainActivity extends AppCompatActivity implements SensorEventListener,FragmentOnAttachListener, BaseArFragment.OnTapArPlaneListener, BaseArFragment.OnSessionConfigurationListener, ArFragment.OnViewCreatedListener{
+public class MainActivity extends AppCompatActivity implements FragmentOnAttachListener, BaseArFragment.OnSessionConfigurationListener, ArFragment.OnViewCreatedListener{
     private ArFragment arFragment;
-    private ViewRenderable viewRenderable;
-    private String title = "Anchor";
     private ArSceneView arSceneView;
-    private TextView[][] text_array;
+    public TextView[][] text_array;
     private FrameLayout outer_frame_layout;
     private ImageView custom_imageview;
     private Switch depthSwitch;
+    private ImageView settingsButton;
+    private TextView gyrotext;//debugging
+
     private boolean depthMap=false;
     private int[][] dist_matrix;
-    private Timer timer;
-    private TimerTask timerTask;
-    private final int numLabelRows=4;
-    private final int numLabelCols=3;
-    private final int timerPeriod = 333;
-    private int lowbound=6000,highbound=10000;
+    public final int numLabelRows=4;
+    public final int numLabelCols=3;
     private int [] lowBoundArr = new int[] {6000,6000,2000,1000};
     private int [] highBoundArr = new int[] {10000,10000,6000,6000};
 
-    private TextView gyrotext;
-    private SensorManager sensorManager;
-    private Sensor accelerometer;
-    private Sensor magneticField;
-    private final float[] accelerometerReading = new float[3];
-    private final float[] magnetometerReading = new float[3];
-    private final float[] rotationMatrix = new float[9];
-    private final float[] rotationMatrixRemapped = new float[9];
-    private final float[] orientationAngles = new float[3];
+    private Timer timer;
+    private TimerTask timerTask;
+    private final int timerPeriod = 333;
 
-    private Vibrator vibrator;
-    private boolean isVibrating=false;
-
-    private ImageView settingsButton;
-
-    @Override
-    public void onSensorChanged(SensorEvent event) {
-        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            System.arraycopy(event.values, 0, accelerometerReading,
-                    0, accelerometerReading.length);
-        } else if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
-            System.arraycopy(event.values, 0, magnetometerReading,
-                    0, magnetometerReading.length);
-        }
-    }
-
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int i) {
-
-    }
-
-    public void updateOrientationAngles() {
-        // Compute the three orientation angles based on the most recent readings from
-        // the device's accelerometer and magnetometer.
-        // Update rotation matrix, which is needed to update orientation angles.
-        SensorManager.getRotationMatrix(rotationMatrix, null,
-                accelerometerReading, magnetometerReading);
-        // "rotationMatrix" now has up-to-date information.
-
-        //Change coordinate system
-        SensorManager.remapCoordinateSystem(rotationMatrix, AXIS_X, AXIS_Z, rotationMatrixRemapped);
-
-        SensorManager.getOrientation(rotationMatrixRemapped, orientationAngles);
-        // "orientationAngles" now has up-to-date information.
-
-        for(int i = 0; i < 3; i++) {
-            orientationAngles[i] = (float)(Math.toDegrees(orientationAngles[i]));
-        }
-    }
+    private SensorHelper sensorHelper;
+    private VibratorHelper vibratorHelper;
+    private SoundHelper soundHelper;
 
     public void startTimer(int delay){
         timer = new Timer("frame_timer");
@@ -200,24 +122,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             return;
         }
         startTimer(2000);
-
         // Get updates from the accelerometer and magnetometer at a constant rate.
-        if (accelerometer != null) {
-            sensorManager.registerListener(this, accelerometer,
-                    SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
-        }
-        if (magneticField != null) {
-            sensorManager.registerListener(this, magneticField,
-                    SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
-        }
+        sensorHelper.resumeSensors();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        // Stop updating scene
         stopTimer();
         // Don't receive any more updates from either sensor.
-        sensorManager.unregisterListener(this);
+        sensorHelper.pauseSensors();
     }
 
     @Override
@@ -233,23 +148,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         }
 
-        sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        if(accelerometer == null) {
-            Log.e(TAG, "Accelerometer not available.");
-            finish(); // Close app
-        }
-        magneticField = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
-        if(magneticField == null) {
-            Log.e(TAG, "Magnetometer not available.");
-            finish(); // Close app
-        }
-
-        vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-        if (!vibrator.hasVibrator()) {
-            Log.e(TAG, "Vibrator not available.");
-            finish(); // Close app
-        }
+        soundHelper = new SoundHelper(this);
+        sensorHelper = new SensorHelper(this);
+        vibratorHelper = new VibratorHelper(this);
 
         gyrotext = findViewById(R.id.gyrotext);
 
@@ -265,7 +166,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 custom_imageview.setImageBitmap(null);
             }});
 
-
         settingsButton = findViewById(R.id.settingsButton);
         settingsButton.setOnClickListener(this::inflatePopupMenu);
     }
@@ -279,7 +179,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // create the popup window
         int width = LinearLayout.LayoutParams.WRAP_CONTENT;
         int height = LinearLayout.LayoutParams.WRAP_CONTENT;
-        boolean focusable = true; // lets taps outside the popup also dismiss it
+        boolean focusable = false; // lets taps outside the popup also dismiss it
         final PopupWindow popupWindow = new PopupWindow(popupView, width, height, focusable);
         // show the popup window
         // which view you pass in doesn't matter, it is only used for the window tolken
@@ -323,7 +223,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             arFragment = (ArFragment) fragment;
             arFragment.setOnSessionConfigurationListener(this);
             arFragment.setOnViewCreatedListener(this);
-            arFragment.setOnTapArPlaneListener(this);
         }
     }
 
@@ -391,30 +290,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     public void onSceneUpdate() {
-
         if(this.text_array==null){
             createLabelGrid();
-            return;//to ensure that labels are created
+            return;//Avoid reading from null array in the catch block
         }
 
-        updateOrientationAngles();
-        gyrotext.setText(String.format(Locale.getDefault(),"x: %d \ny: %d\n z: %d", Math.round(orientationAngles[0]),Math.round(orientationAngles[1]),Math.round(orientationAngles[2])));
-        if(orientationAngles[1]>30 || orientationAngles[1]<-20 || Math.abs(orientationAngles[2])>20){
-            if(!isVibrating){
-                isVibrating=true;
-                vibrator.vibrate(VibrationEffect.createOneShot(1000,VibrationEffect.DEFAULT_AMPLITUDE));
-                for(int i=0;i<this.numLabelRows;i++){
-                    for(int j=0;j<this.numLabelCols;j++){
-                        this.text_array[i][j].setText("");
-                    }
-                }
-                this.text_array[1][0].setText("Παρακαλώ κρατήστε όρθια τη συσκευή");
-                this.text_array[1][0].setTextColor(Color.WHITE);
-
-            }
+        sensorHelper.updateOrientationAngles();
+        gyrotext.setText(String.format(Locale.getDefault(),"x: %d \ny: %d\n z: %d", Math.round(sensorHelper.orientationAngles[0]),Math.round(sensorHelper.orientationAngles[1]),Math.round(sensorHelper.orientationAngles[2])));
+        if(sensorHelper.orientationAngles[1]>30 || sensorHelper.orientationAngles[1]<-20 || Math.abs(sensorHelper.orientationAngles[2])>20){
+            vibratorHelper.vibrate();
             return;
         }
-        isVibrating = false;
+        vibratorHelper.stopVibrating();
 
         Image depthImage = null;
         Frame frame = this.arSceneView.getArFrame();
@@ -450,18 +337,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 depthImage.close();
             }
         }
-    }
-
-    @Override
-    public void onTapPlane(HitResult hitResult, Plane plane, MotionEvent motionEvent) {
-        if (viewRenderable == null) {
-            Toast.makeText(this, "Loading...", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        Anchor anchor = hitResult.createAnchor();
-        AnchorNode anchorNode = new AnchorNode(anchor);
-        anchorNode.setParent(arFragment.getArSceneView().getScene());
-        anchorNode.setRenderable(viewRenderable);
     }
 
     public Bitmap ImageToBitmap(Image depthImage) {
