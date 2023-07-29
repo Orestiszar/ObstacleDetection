@@ -57,8 +57,8 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 
     private boolean depthMap=false;
     private int[][] dist_matrix;
-    public final int numLabelRows=4;
-    public final int numLabelCols=3;
+    protected final int numLabelRows=4;
+    protected final int numLabelCols=3;
     private int [] lowBoundArr = new int[] {6000,6000,2000,1000};
     private int [] highBoundArr = new int[] {10000,10000,6000,6000};
     private int dynamic_weight = 0;
@@ -250,7 +250,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 
     public void createLabelGrid(){
         Image depthImage = null;
-        Frame frame = this.arSceneView.getArFrame();
+        Frame frame = arSceneView.getArFrame();
         try{
             depthImage = frame.acquireDepthImage16Bits(); //160*90
             int imageHeight = depthImage.getWidth();
@@ -267,21 +267,20 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
                 newWidth = (int) (newHeight * aspectRatio);
             }
             // new width and new height are the dimensions of the screen that the labels need to represent. The ImageView is set to fit center.
-            int horizontalStep = newWidth/this.numLabelCols;
-            int verticalStep = newHeight/this.numLabelRows;
-            this.text_array = new TextView[this.numLabelRows][this.numLabelCols];
+            int horizontalStep = newWidth/numLabelCols;
+            int verticalStep = newHeight/numLabelRows;
+            text_array = new TextView[numLabelRows][numLabelCols];
             for(int i=0; i<numLabelRows;i++){
                 for(int j=0;j<numLabelCols;j++){
-                    if(this.text_array[i][j]!=null) continue;
-                    this.text_array[i][j] = new TextView(this);
+                    text_array[i][j] = new TextView(this);
                     FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
                             ViewGroup.LayoutParams.WRAP_CONTENT,
                             ViewGroup.LayoutParams.WRAP_CONTENT);
                     params.topMargin = (verticalStep*i)+ (verticalStep/3) + ((imageViewHeight-newHeight)/2);       // Set the top margin in pixels
                     params.leftMargin = (horizontalStep*j) + horizontalStep/4 + ((imageViewWidth-newWidth)/2);  // Set the left margin in pixels
-                    this.text_array[i][j].setTextSize(24);
-                    this.text_array[i][j].setLayoutParams(params);
-                    outer_frame_layout.addView(this.text_array[i][j]);
+                    text_array[i][j].setTextSize(24);
+                    text_array[i][j].setLayoutParams(params);
+                    outer_frame_layout.addView(text_array[i][j]);
                 }
             }
         }
@@ -303,8 +302,10 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 
         sensorHelper.updateOrientationAngles();
         gyrotext.setText(String.format(Locale.getDefault(),"x: %d \ny: %d\n z: %d", Math.round(sensorHelper.orientationAngles[0]),Math.round(sensorHelper.orientationAngles[1]),Math.round(sensorHelper.orientationAngles[2])));
+
         if(sensorHelper.orientationAngles[1]>30 || sensorHelper.orientationAngles[1]<-20 || Math.abs(sensorHelper.orientationAngles[2])>20){
             vibratorHelper.vibrate();
+            soundHelper.playHoldDeviceUp();
             return;
         }
         vibratorHelper.stopVibrating();
@@ -314,17 +315,26 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         try {
             depthImage = frame.acquireDepthImage16Bits(); //160*90
             // Use the depth image here.
-
             if(depthMap) custom_imageview.setImageBitmap(ImageToBitmap(depthImage));
 
-            this.dist_matrix = getAverageDistances(depthImage,numLabelRows,numLabelCols);
+            dist_matrix = getAverageDistances(depthImage,numLabelRows,numLabelCols);
+
+            //to check and save if an obstacle exists in this column
+            boolean [] outBoundArr = new boolean[numLabelCols]; //init to false
+
             for(int i=0;i<numLabelRows;i++){
                 for(int j=0;j<numLabelCols;j++){
                     text_array[i][j].setText(Integer.toString(dist_matrix[i][j]));
-                    if(dist_matrix[i][j]<=lowBoundArr[i] + (dynamic_weight*sensorHelper.orientationAngles[1])) text_array[i][j].setTextColor(Color.RED);
+                    int bound = (int)(lowBoundArr[i] - (dynamic_weight*sensorHelper.orientationAngles[1]));
+                    if(dist_matrix[i][j]<=bound){
+                        text_array[i][j].setTextColor(Color.RED);
+                        outBoundArr[j] = true; //this square has an obstacle
+                    }
                     else text_array[i][j].setTextColor(Color.WHITE);
                 }
             }
+            soundHelper.announceObstacles(outBoundArr);
+
         } catch (NotYetAvailableException e) {
             // This means that depth data is not available yet.
             // Depth data will not be available if there are no tracked
