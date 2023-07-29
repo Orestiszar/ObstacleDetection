@@ -237,6 +237,10 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
             config.setDepthMode(Config.DepthMode.AUTOMATIC);
         }
+        else{
+            Toast.makeText(this,"This device does not support ARCore depth",Toast.LENGTH_LONG);
+            finish();
+        }
     }
 
     @Override
