@@ -61,29 +61,30 @@ public class SoundHelper {
         mp[5].start();
     }
 
-    public void announceObstacles(boolean [] outBoundArr){
+    public void announceObstacles(boolean [] obstacleArr){
         //if there is an obstacles in the middle and the left we call left
         //if there is an obstacles in the middle and the right we call right
         //we only call middle if the obstacle is specifically in the middle
 
-        if(outBoundArr[0] && outBoundArr[1] && outBoundArr[2]){
+        if(obstacleArr[0] && obstacleArr[1] && obstacleArr[2]){
             playWayBlocked();
         }
-        else if(outBoundArr[0] && outBoundArr[2]){
+        else if(obstacleArr[0] && obstacleArr[2]){
             //left+right
             playLeftAndRight();
         }
-        else if(outBoundArr[0]){
+        else if(obstacleArr[0]){
             //left
             playObstacleLeft();
         }
-        else if(outBoundArr[1]){
-            //ahead
-            playObstacleAhead();
-        }
-        else if(outBoundArr[2]){
+        else if(obstacleArr[2]){
             //right
             playObstacleRight();
         }
+        else if(obstacleArr[1]){
+            //ahead
+            playObstacleAhead();
+        }
+
     }
 }

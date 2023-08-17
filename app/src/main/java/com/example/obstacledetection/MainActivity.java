@@ -53,13 +53,14 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     private ImageView custom_imageview;
     private Switch depthSwitch;
     private ImageView settingsButton;
-    private TextView gyrotext;//debugging
+    public TextView gyrotext;//debugging
 
     private boolean depthMap=false;
     private int[][] dist_matrix;
     protected final int numLabelRows=4;
     protected final int numLabelCols=3;
-    private int [] lowBoundArr = new int[] {6000,6000,2000,1000};
+    private int [] lowBoundArr = new int[] {1000,1000,1000,1000};
+//    private int [] lowBoundArr = new int[] {6000,6000,2000,1000};
     private int [] highBoundArr = new int[] {10000,10000,6000,6000};
     private int dynamic_weight = 0;
 
@@ -70,6 +71,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     private SensorHelper sensorHelper;
     private VibratorHelper vibratorHelper;
     private SoundHelper soundHelper;
+    private ObstacleStateMachine obstacleStateMachine;
 
     public void startTimer(int delay){
         timer = new Timer("frame_timer");
@@ -152,6 +154,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         soundHelper = new SoundHelper(this);
         sensorHelper = new SensorHelper(this);
         vibratorHelper = new VibratorHelper(this);
+        obstacleStateMachine = new ObstacleStateMachine(this,3);
 
         gyrotext = findViewById(R.id.gyrotext);
 
@@ -301,7 +304,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     public void onSceneUpdate() {
         if(text_array==null){
             createLabelGrid();
-            return;//Avoid reading from null array in the catch block
+            return;//return to avoid reading from null array in the catch block
         }
 
         sensorHelper.updateOrientationAngles();
@@ -324,20 +327,21 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             dist_matrix = getAverageDistances(depthImage,numLabelRows,numLabelCols);
 
             //to check and save if an obstacle exists in this column
-            boolean [] outBoundArr = new boolean[numLabelCols]; //init to false
+            boolean [][] obstacleArr = new boolean[numLabelRows][numLabelCols]; //init to false
+
 
             for(int i=0;i<numLabelRows;i++){
                 for(int j=0;j<numLabelCols;j++){
                     text_array[i][j].setText(Integer.toString(dist_matrix[i][j]));
-                    int bound = (int)(lowBoundArr[i] - (dynamic_weight*sensorHelper.orientationAngles[1]));
+                    int bound = (int)(lowBoundArr[i] + (dynamic_weight*sensorHelper.orientationAngles[1]*dist_matrix[i][j])/1000);
                     if(dist_matrix[i][j]<=bound){
                         text_array[i][j].setTextColor(Color.RED);
-                        outBoundArr[j] = true; //this square has an obstacle
+                        obstacleArr[i][j] = true;
                     }
                     else text_array[i][j].setTextColor(Color.WHITE);
                 }
             }
-            soundHelper.announceObstacles(outBoundArr);
+            soundHelper.announceObstacles(obstacleStateMachine.decideObstacles(obstacleArr));
 
         } catch (NotYetAvailableException e) {
             // This means that depth data is not available yet.
