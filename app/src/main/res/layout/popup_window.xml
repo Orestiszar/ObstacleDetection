@@ -10,10 +10,11 @@
         android:id="@+id/setPopupParamsButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="300dp"
+        android:layout_marginTop="380dp"
         android:layout_marginStart="125dp"
         android:text="Set"
         android:textSize="18dp" />
+
 
     <TextView
         android:id="@+id/textView"
@@ -163,6 +164,24 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="105dp"
         android:layout_marginTop="250dp"
+        android:ems="6"
+        android:inputType="number" />
+
+    <TextView
+        android:id="@+id/textView4s"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="120dp"
+        android:layout_marginTop="310dp"
+        android:text="Width Offset"
+        android:textSize="18dp"/>
+
+    <EditText
+        android:id="@+id/EtWidthOffset"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="105dp"
+        android:layout_marginTop="330dp"
         android:ems="6"
         android:inputType="number" />
 

@@ -48,7 +48,7 @@ import java.util.TimerTask;
 public class MainActivity extends AppCompatActivity implements FragmentOnAttachListener, BaseArFragment.OnSessionConfigurationListener, ArFragment.OnViewCreatedListener{
     private ArFragment arFragment;
     private ArSceneView arSceneView;
-    public TextView[][] text_array;
+    protected TextView[][] text_array;
     private FrameLayout outer_frame_layout;
     private ImageView custom_imageview;
     private Switch depthSwitch;
@@ -63,6 +63,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 //    private int [] lowBoundArr = new int[] {6000,6000,2000,1000};
     private int [] highBoundArr = new int[] {10000,10000,6000,6000};
     private int dynamic_weight = 0;
+    private int width_percentage = 100;
 
     private Timer timer;
     private TimerTask timerTask;
@@ -203,6 +204,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         ETArr[3][1] = popupView.findViewById(R.id.EtHigh3);
 
         EditText dynamic_weight_ET = popupView.findViewById(R.id.EtDynamicWeight);
+        EditText width_offset_ET = popupView.findViewById(R.id.EtWidthOffset);
 
         for(int i=0;i<4;i++) {
             ETArr[i][0].setText(Integer.toString(lowBoundArr[i]));
@@ -210,6 +212,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         }
 
         dynamic_weight_ET.setText(Integer.toString(dynamic_weight));
+        width_offset_ET.setText(Integer.toString(width_percentage));
 
         Button setButton = popupView.findViewById(R.id.setPopupParamsButton);
         setButton.setOnClickListener(new View.OnClickListener() {
@@ -221,6 +224,19 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
                     highBoundArr[i] = Integer.parseInt(ETArr[i][1].getText().toString());
                 }
                 dynamic_weight = Integer.parseInt(dynamic_weight_ET.getText().toString());
+
+                if(width_percentage>100) width_percentage=100;
+                else if(width_percentage<0) width_percentage=0;
+                width_percentage = Integer.parseInt(width_offset_ET.getText().toString());
+
+
+                for(int i =0;i< numLabelRows ;i++){
+                    for (int j=0;j<numLabelCols;j++){
+                        outer_frame_layout.removeView(text_array[i][j]);
+                    }
+                }
+
+                createLabelGrid();
                 popupWindow.dismiss();
             }
         });
@@ -274,7 +290,10 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
                 newWidth = (int) (newHeight * aspectRatio);
             }
             // new width and new height are the dimensions of the screen that the labels need to represent. The ImageView is set to fit center.
-            int horizontalStep = newWidth/numLabelCols;
+
+            int true_width = (int)(newWidth*(width_percentage/100f));
+
+            int horizontalStep = true_width/numLabelCols;
             int verticalStep = newHeight/numLabelRows;
             text_array = new TextView[numLabelRows][numLabelCols];
             for(int i=0; i<numLabelRows;i++){
@@ -416,12 +435,15 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     public int[][] getAverageDistances(Image depthImage, int rows, int cols){
         int [][] distance_matrix = new int[rows][cols];
 
+        int true_image_width = (int) (depthImage.getWidth()*(width_percentage/100f));
+        int width_offset = (depthImage.getWidth() - true_image_width)/2;
+
         int height_increment = depthImage.getHeight()/cols;//Image needs to be rotated 90 degrees so use cols instead of rows here
-        int width_increment = depthImage.getWidth()/rows;
+        int width_increment =  true_image_width/rows;
 
         for(int i=0; i<rows;i++){//assume the image is horizontal
             for(int j=0;j<cols;j++){
-                distance_matrix[i][cols-j-1] = getAverageSubImageDist(depthImage,j*height_increment,(j+1)*height_increment,i*width_increment,(i+1)*width_increment);
+                distance_matrix[i][cols-j-1] = getAverageSubImageDist(depthImage,j*height_increment,(j+1)*height_increment,width_offset + i*width_increment,(i+1)*width_increment);
             }
         }
         return distance_matrix;
