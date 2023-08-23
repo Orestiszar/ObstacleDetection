@@ -430,13 +430,6 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
                 mean_value += dist;
             }
         }
-
-        if(mean_value<0) return 1;
-        if(widthend<widthstart)return 2;
-        if (heightend==heightstart) return 3;
-        else if(heightend<heightstart)
-            return 4;
-
         return mean_value/((heightend-heightstart)*(widthend-widthstart));
     }
 
