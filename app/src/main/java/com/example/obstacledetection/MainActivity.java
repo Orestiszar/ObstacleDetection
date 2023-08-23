@@ -349,7 +349,6 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             //to check and save if an obstacle exists in this column
             boolean [][] obstacleArr = new boolean[numLabelRows][numLabelCols]; //init to false
 
-
             for(int i=0;i<numLabelRows;i++){
                 for(int j=0;j<numLabelCols;j++){
                     text_array[i][j].setText(Integer.toString(dist_matrix[i][j]));
