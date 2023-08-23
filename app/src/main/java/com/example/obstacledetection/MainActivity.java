@@ -292,6 +292,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             // new width and new height are the dimensions of the screen that the labels need to represent. The ImageView is set to fit center.
 
             int true_width = (int)(newWidth*(width_percentage/100f));
+            int widthOffset= (newWidth-true_width)/2;
 
             int horizontalStep = true_width/numLabelCols;
             int verticalStep = newHeight/numLabelRows;
@@ -303,7 +304,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
                             ViewGroup.LayoutParams.WRAP_CONTENT,
                             ViewGroup.LayoutParams.WRAP_CONTENT);
                     params.topMargin = (verticalStep*i)+ (verticalStep/3) + ((imageViewHeight-newHeight)/2);       // Set the top margin in pixels
-                    params.leftMargin = (horizontalStep*j) + horizontalStep/4 + ((imageViewWidth-newWidth)/2);  // Set the left margin in pixels
+                    params.leftMargin = widthOffset + (horizontalStep*j) + horizontalStep/4 + ((imageViewWidth-newWidth)/2);  // Set the left margin in pixels
                     text_array[i][j].setTextSize(24);
                     text_array[i][j].setLayoutParams(params);
                     outer_frame_layout.addView(text_array[i][j]);
@@ -327,7 +328,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         }
 
         sensorHelper.updateOrientationAngles();
-        gyrotext.setText(String.format(Locale.getDefault(),"x: %d \ny: %d\n z: %d", Math.round(sensorHelper.orientationAngles[0]),Math.round(sensorHelper.orientationAngles[1]),Math.round(sensorHelper.orientationAngles[2])));
+//        gyrotext.setText(String.format(Locale.getDefault(),"x: %d \ny: %d\n z: %d", Math.round(sensorHelper.orientationAngles[0]),Math.round(sensorHelper.orientationAngles[1]),Math.round(sensorHelper.orientationAngles[2])));
 
         if(sensorHelper.orientationAngles[1]>30 || sensorHelper.orientationAngles[1]<-20 || Math.abs(sensorHelper.orientationAngles[2])>20){
             vibratorHelper.vibrate();
@@ -429,23 +430,31 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
                 mean_value += dist;
             }
         }
+
+        if(mean_value<0) return 1;
+        if(widthend<widthstart)return 2;
+        if (heightend==heightstart) return 3;
+        else if(heightend<heightstart)
+            return 4;
+
         return mean_value/((heightend-heightstart)*(widthend-widthstart));
     }
 
     public int[][] getAverageDistances(Image depthImage, int rows, int cols){
         int [][] distance_matrix = new int[rows][cols];
 
-        int true_image_width = (int) (depthImage.getWidth()*(width_percentage/100f));
-        int width_offset = (depthImage.getWidth() - true_image_width)/2;
+        int true_height = (int) (depthImage.getHeight()*(width_percentage/100f));//rotated image
+        int height_offset = (depthImage.getHeight() - true_height)/2;
 
-        int height_increment = depthImage.getHeight()/cols;//Image needs to be rotated 90 degrees so use cols instead of rows here
-        int width_increment =  true_image_width/rows;
+        int height_increment = true_height/cols;//Image needs to be rotated 90 degrees so use cols instead of rows here
+        int width_increment =  depthImage.getWidth()/rows;
 
         for(int i=0; i<rows;i++){//assume the image is horizontal
             for(int j=0;j<cols;j++){
-                distance_matrix[i][cols-j-1] = getAverageSubImageDist(depthImage,j*height_increment,(j+1)*height_increment,width_offset + i*width_increment,(i+1)*width_increment);
+                distance_matrix[i][cols-j-1] = getAverageSubImageDist(depthImage,height_offset + j*height_increment,height_offset + (j+1)*height_increment,i*width_increment,(i+1)*width_increment);
             }
         }
+
         return distance_matrix;
     }
 }
