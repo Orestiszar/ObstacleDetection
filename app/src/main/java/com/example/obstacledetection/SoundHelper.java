@@ -61,6 +61,29 @@ public class SoundHelper {
         mp[5].start();
     }
 
+    public boolean announceSteepRoad(boolean [] steepRoadArr){
+
+        if(steepRoadArr[0] && steepRoadArr[1] && steepRoadArr[2]){
+            //way too steep
+        }
+        else if(steepRoadArr[0] && steepRoadArr[2]){
+            //steep left+right
+        }
+        else if(steepRoadArr[0]){
+            //left
+        }
+        else if(steepRoadArr[2]){
+            //right
+        }
+        else if(steepRoadArr[1]){
+            //ahead
+        }
+        else{
+            return false;
+        }
+        return true;
+    }
+
     public void announceObstacles(boolean [] obstacleArr){
         //if there is an obstacles in the middle and the left we call left
         //if there is an obstacles in the middle and the right we call right

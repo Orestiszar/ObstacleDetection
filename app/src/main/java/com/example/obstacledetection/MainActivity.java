@@ -60,8 +60,8 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     protected final int numLabelRows=4;
     protected final int numLabelCols=3;
     private int [] lowBoundArr = new int[] {1000,1000,1000,1000};
-//    private int [] lowBoundArr = new int[] {6000,6000,2000,1000};
-    private int [] highBoundArr = new int[] {10000,10000,6000,6000};
+//    private int [] lowBoundArr = new int[] {4000,6000,2000,1000};
+    private int [] highBoundArr = new int[] {10000,10000,6000,4000};
     private int dynamic_weight = 0;
     private int width_percentage = 100;
 
@@ -348,18 +348,30 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 
             //to check and save if an obstacle exists in this column
             boolean [][] obstacleArr = new boolean[numLabelRows][numLabelCols]; //init to false
+            boolean [] steepRoadArr = new boolean[numLabelCols]; //init to false
 
             for(int i=0;i<numLabelRows;i++){
                 for(int j=0;j<numLabelCols;j++){
+
                     text_array[i][j].setText(Integer.toString(dist_matrix[i][j]));
-                    int bound = (int)(lowBoundArr[i] + (dynamic_weight*sensorHelper.orientationAngles[1]*dist_matrix[i][j])/1000);
-                    if(dist_matrix[i][j]<=bound){
+
+                    int dyn_bound = (int)((dynamic_weight*sensorHelper.orientationAngles[1]*dist_matrix[i][j])/1000);
+
+                    if(i==numLabelRows-1 && (dist_matrix[i][j] >= highBoundArr[i] + dyn_bound)){ //for steep roads
+                        text_array[i][j].setTextColor(Color.BLUE);
+                        steepRoadArr[j] = true;
+                        continue;
+                    }
+
+                    if(dist_matrix[i][j]<= lowBoundArr[i] + dyn_bound){
                         text_array[i][j].setTextColor(Color.RED);
                         obstacleArr[i][j] = true;
                     }
                     else text_array[i][j].setTextColor(Color.WHITE);
                 }
             }
+            if(soundHelper.announceSteepRoad(obstacleStateMachine.decideSteepAhead(steepRoadArr))) return;
+
             soundHelper.announceObstacles(obstacleStateMachine.decideObstacles(obstacleArr));
 
         } catch (NotYetAvailableException e) {
@@ -370,7 +382,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             // environment.
             for(int i=0;i<numLabelRows;i++){
                 for(int j=0;j<numLabelCols;j++){
-                    text_array[i][j].setText("Null");
+                    text_array[i][j].setText("");
                     text_array[i][j].setTextColor(Color.WHITE);
                 }
             }
