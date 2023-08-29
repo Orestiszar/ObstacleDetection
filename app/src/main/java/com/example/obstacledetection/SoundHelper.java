@@ -16,7 +16,11 @@ public class SoundHelper {
                 MediaPlayer.create(mainActivity, R.raw.obstacle_ahead),
                 MediaPlayer.create(mainActivity, R.raw.way_blocked),
                 MediaPlayer.create(mainActivity, R.raw.left_and_right),
-                MediaPlayer.create(mainActivity, R.raw.hold_device_up)
+                MediaPlayer.create(mainActivity, R.raw.hold_device_up),
+                MediaPlayer.create(mainActivity, R.raw.steep_ahead),
+                MediaPlayer.create(mainActivity, R.raw.steep_left),
+                MediaPlayer.create(mainActivity, R.raw.steep_right),
+                MediaPlayer.create(mainActivity, R.raw.steep_right_and_left)
         };
         for(MediaPlayer player :mp){
             player.setOnCompletionListener((MediaPlayer mediaPlayer)->{
@@ -61,22 +65,51 @@ public class SoundHelper {
         mp[5].start();
     }
 
+    public void playSteepAhead(){
+        if(isPlaying) return;
+        isPlaying=true;
+        mp[6].start();
+    }
+
+    public void playSteepLeft(){
+        if(isPlaying) return;
+        isPlaying=true;
+        mp[7].start();
+    }
+
+    public void playSteepRight(){
+        if(isPlaying) return;
+        isPlaying=true;
+        mp[8].start();
+    }
+
+    public void playSteepLeftAndRight(){
+        if(isPlaying) return;
+        isPlaying=true;
+        mp[9].start();
+    }
+
     public boolean announceSteepRoad(boolean [] steepRoadArr){
 
         if(steepRoadArr[0] && steepRoadArr[1] && steepRoadArr[2]){
             //way too steep
+            playSteepAhead();
         }
         else if(steepRoadArr[0] && steepRoadArr[2]){
             //steep left+right
+            playSteepLeftAndRight();
         }
         else if(steepRoadArr[0]){
             //left
+            playSteepLeft();
         }
         else if(steepRoadArr[2]){
             //right
+            playSteepRight();
         }
         else if(steepRoadArr[1]){
             //ahead
+            playSteepAhead();
         }
         else{
             return false;
