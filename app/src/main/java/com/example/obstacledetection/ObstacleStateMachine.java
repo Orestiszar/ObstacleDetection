@@ -1,5 +1,6 @@
 package com.example.obstacledetection;
 
+import java.security.PublicKey;
 import java.util.Arrays;
 
 public class ObstacleStateMachine {
@@ -7,6 +8,10 @@ public class ObstacleStateMachine {
     private int [][] stateArr;
     private int [] steepArr;
     private int states;
+
+    public void setStates(int states) {
+        this.states = states;
+    }
 
     public ObstacleStateMachine(MainActivity mainActivity, int states) {
         this.mainActivity = mainActivity;
@@ -35,6 +40,7 @@ public class ObstacleStateMachine {
         }
 
 //        mainActivity.gyrotext.setText(String.valueOf(result[0]) + " " + String.valueOf(result[1]) + " " +  String.valueOf(result[2]) + "\n" + obstacleArr[3][0]);
+        mainActivity.gyrotext.setText(Integer.toString(states));
 
         return result;
     }

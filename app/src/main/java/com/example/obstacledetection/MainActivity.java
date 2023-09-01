@@ -31,6 +31,7 @@ import android.widget.Toast;
 import com.google.ar.core.Config;
 import com.google.ar.core.Frame;
 import com.google.ar.core.Session;
+import com.google.ar.core.exceptions.CameraNotAvailableException;
 import com.google.ar.core.exceptions.NotYetAvailableException;
 import com.google.ar.sceneform.ArSceneView;
 import com.google.ar.sceneform.SceneView;
@@ -48,6 +49,7 @@ import java.util.TimerTask;
 public class MainActivity extends AppCompatActivity implements FragmentOnAttachListener, BaseArFragment.OnSessionConfigurationListener, ArFragment.OnViewCreatedListener{
     private ArFragment arFragment;
     private ArSceneView arSceneView;
+    private Session session;
     protected TextView[][] text_array;
     private FrameLayout outer_frame_layout;
     private ImageView custom_imageview;
@@ -59,15 +61,16 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     private int[][] dist_matrix;
     protected final int numLabelRows=4;
     protected final int numLabelCols=3;
-    private int [] lowBoundArr = new int[] {1000,1000,1000,1000};
-//    private int [] lowBoundArr = new int[] {4000,6000,2000,1000};
+//    private int [] lowBoundArr = new int[] {1000,1000,1000,1000};
+    private int [] lowBoundArr = new int[] {3000,5000,2000,2000};
     private int [] highBoundArr = new int[] {10000,10000,6000,4000};
-    private int dynamic_weight = 0;
-    private int width_percentage = 100;
+    private int dynamic_weight = 5;
+    private int width_percentage = 80;
 
     private Timer timer;
     private TimerTask timerTask;
-    private final int timerPeriod = 333;
+//    private final int timerPeriod = 333;
+    private int timerPeriod = 1000/10;
 
     private SensorHelper sensorHelper;
     private VibratorHelper vibratorHelper;
@@ -155,7 +158,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         soundHelper = new SoundHelper(this);
         sensorHelper = new SensorHelper(this);
         vibratorHelper = new VibratorHelper(this);
-        obstacleStateMachine = new ObstacleStateMachine(this,3);
+        obstacleStateMachine = new ObstacleStateMachine(this,1000/timerPeriod); //num of fps so it takes a second
 
         gyrotext = findViewById(R.id.gyrotext);
 
@@ -205,6 +208,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 
         EditText dynamic_weight_ET = popupView.findViewById(R.id.EtDynamicWeight);
         EditText width_offset_ET = popupView.findViewById(R.id.EtWidthOffset);
+        EditText FPS_ET = popupView.findViewById(R.id.EtFPS);
 
         for(int i=0;i<4;i++) {
             ETArr[i][0].setText(Integer.toString(lowBoundArr[i]));
@@ -213,6 +217,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 
         dynamic_weight_ET.setText(Integer.toString(dynamic_weight));
         width_offset_ET.setText(Integer.toString(width_percentage));
+        FPS_ET.setText(Integer.toString(1000/timerPeriod));
 
         Button setButton = popupView.findViewById(R.id.setPopupParamsButton);
         setButton.setOnClickListener(new View.OnClickListener() {
@@ -225,10 +230,13 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
                 }
                 dynamic_weight = Integer.parseInt(dynamic_weight_ET.getText().toString());
 
+                width_percentage = Integer.parseInt(width_offset_ET.getText().toString());
                 if(width_percentage>100) width_percentage=100;
                 else if(width_percentage<0) width_percentage=0;
-                width_percentage = Integer.parseInt(width_offset_ET.getText().toString());
 
+                int fps = Integer.parseInt(FPS_ET.getText().toString());
+                timerPeriod = 1000/fps;
+                obstacleStateMachine.setStates(fps);
 
                 for(int i =0;i< numLabelRows ;i++){
                     for (int j=0;j<numLabelCols;j++){
@@ -255,6 +263,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     public void onSessionConfiguration(Session session, Config config) {
         if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
             config.setDepthMode(Config.DepthMode.AUTOMATIC);
+            this.session = session;
         }
         else{
             Toast.makeText(this,"This device does not support ARCore depth",Toast.LENGTH_LONG);
