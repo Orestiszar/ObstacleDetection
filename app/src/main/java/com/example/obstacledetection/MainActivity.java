@@ -7,6 +7,7 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentOnAttachListener;
 
 import android.graphics.Bitmap;
+import android.graphics.Camera;
 import android.graphics.Color;
 import android.graphics.Matrix;
 
@@ -49,7 +50,6 @@ import java.util.TimerTask;
 public class MainActivity extends AppCompatActivity implements FragmentOnAttachListener, BaseArFragment.OnSessionConfigurationListener, ArFragment.OnViewCreatedListener{
     private ArFragment arFragment;
     private ArSceneView arSceneView;
-    private Session session;
     protected TextView[][] text_array;
     private FrameLayout outer_frame_layout;
     private ImageView custom_imageview;
@@ -263,7 +263,6 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     public void onSessionConfiguration(Session session, Config config) {
         if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
             config.setDepthMode(Config.DepthMode.AUTOMATIC);
-            this.session = session;
         }
         else{
             Toast.makeText(this,"This device does not support ARCore depth",Toast.LENGTH_LONG);
