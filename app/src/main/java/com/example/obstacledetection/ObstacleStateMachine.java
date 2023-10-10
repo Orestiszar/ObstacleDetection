@@ -30,7 +30,6 @@ public class ObstacleStateMachine {
         for (int i = 0; i < mainActivity.numLabelRows; i++) {
             for (int j = 0; j < mainActivity.numLabelCols; j++) {
 
-
                 if(obstacleArr[i][j] && stateArr[i][j]<states-1) stateArr[i][j]++;
 
                 else if(!obstacleArr[i][j] && stateArr[i][j]>0) stateArr[i][j]--;
@@ -38,10 +37,6 @@ public class ObstacleStateMachine {
                 if (stateArr[i][j]==states-1) result[j] = true;
             }
         }
-
-//        mainActivity.gyrotext.setText(String.valueOf(result[0]) + " " + String.valueOf(result[1]) + " " +  String.valueOf(result[2]) + "\n" + obstacleArr[3][0]);
-        mainActivity.gyrotext.setText(Integer.toString(states));
-
         return result;
     }
 
@@ -55,11 +50,7 @@ public class ObstacleStateMachine {
             else if(!steepRoadArr[i] && steepArr[i]>0) steepArr[i]--;
 
             if (steepArr[i]==states-1) result[i] = true;
-
         }
-
-//        mainActivity.gyrotext.setText(String.valueOf(result[0]) + " " + String.valueOf(result[1]) + " " +  String.valueOf(result[2]) + "\n" + obstacleArr[3][0]);
-
         return result;
     }
 }

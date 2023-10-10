@@ -2,8 +2,6 @@ package com.example.obstacledetection;
 
 import android.media.MediaPlayer;
 
-import androidx.fragment.app.FragmentOnAttachListener;
-
 public class SoundHelper {
     private MainActivity mainActivity;
     private MediaPlayer[] mp;

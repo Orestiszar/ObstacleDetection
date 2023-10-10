@@ -26,6 +26,8 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.Switch;
+import android.widget.TableLayout;
+import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -55,13 +57,12 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     private ImageView custom_imageview;
     private Switch depthSwitch;
     private ImageView settingsButton;
-    public TextView gyrotext;//debugging
+    public TextView gyrotext;
 
     private boolean depthMap=false;
     private int[][] dist_matrix;
     protected final int numLabelRows=4;
     protected final int numLabelCols=3;
-//    private int [] lowBoundArr = new int[] {1000,1000,1000,1000};
     private int [] lowBoundArr = new int[] {3000,5000,2000,2000};
     private int [] highBoundArr = new int[] {10000,10000,6000,4000};
     private int dynamic_weight = 5;
@@ -69,7 +70,6 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 
     private Timer timer;
     private TimerTask timerTask;
-//    private final int timerPeriod = 333;
     private int timerPeriod = 1000/10;
 
     private SensorHelper sensorHelper;
@@ -110,9 +110,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
         if (!CameraPermissionHelper.hasCameraPermission(this)) {
-            // Use toast instead of snackbar here since the activity will exit.
-            Toast.makeText(this, "Camera permission is needed to run this application", Toast.LENGTH_LONG)
-                    .show();
+            Toast.makeText(this, "Camera permission is needed to run this application", Toast.LENGTH_LONG).show();
             if (!CameraPermissionHelper.shouldShowRequestPermissionRationale(this)) {
                 // Permission denied with checking "Do not ask again".
                 CameraPermissionHelper.launchPermissionSettings(this);
@@ -160,10 +158,8 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         vibratorHelper = new VibratorHelper(this);
         obstacleStateMachine = new ObstacleStateMachine(this,1000/timerPeriod); //num of fps so it takes a second
 
-        gyrotext = findViewById(R.id.gyrotext);
-
         outer_frame_layout = findViewById(R.id.outer_frame_layout);
-
+        gyrotext = findViewById(R.id.gyrotext);
         custom_imageview = new ImageView(this);
         outer_frame_layout.addView(custom_imageview);
 
@@ -194,17 +190,14 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         // which view you pass in doesn't matter, it is only used for the window tolken
         popupWindow.showAtLocation(view, Gravity.CENTER, 0, 0);
 
-
+        TableLayout tableLayout = popupView.findViewById(R.id.ETTable);
         EditText [][] ETArr = new EditText[4][2];
-        ETArr[0][0] = popupView.findViewById(R.id.EtLow0);
-        ETArr[1][0] = popupView.findViewById(R.id.EtLow1);
-        ETArr[2][0] = popupView.findViewById(R.id.EtLow2);
-        ETArr[3][0] = popupView.findViewById(R.id.EtLow3);
-
-        ETArr[0][1] = popupView.findViewById(R.id.EtHigh0);
-        ETArr[1][1] = popupView.findViewById(R.id.EtHigh1);
-        ETArr[2][1] = popupView.findViewById(R.id.EtHigh2);
-        ETArr[3][1] = popupView.findViewById(R.id.EtHigh3);
+        for(int i=0;i<tableLayout.getChildCount(); i++){
+            TableRow row = (TableRow) tableLayout.getChildAt(i);
+            for(int j=0; j< row.getChildCount(); j++){
+                ETArr[i][j] = (EditText) row.getChildAt(j);
+            }
+        }
 
         EditText dynamic_weight_ET = popupView.findViewById(R.id.EtDynamicWeight);
         EditText width_offset_ET = popupView.findViewById(R.id.EtWidthOffset);
@@ -336,14 +329,21 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         }
 
         sensorHelper.updateOrientationAngles();
-//        gyrotext.setText(String.format(Locale.getDefault(),"x: %d \ny: %d\n z: %d", Math.round(sensorHelper.orientationAngles[0]),Math.round(sensorHelper.orientationAngles[1]),Math.round(sensorHelper.orientationAngles[2])));
+        gyrotext.setText(String.format(Locale.getDefault(),"x: %d \ny: %d\n z: %d", Math.round(sensorHelper.orientationAngles[0]),Math.round(sensorHelper.orientationAngles[1]),Math.round(sensorHelper.orientationAngles[2])));
 
-        if(sensorHelper.orientationAngles[1]>30 || sensorHelper.orientationAngles[1]<-20 || Math.abs(sensorHelper.orientationAngles[2])>20){
-            vibratorHelper.vibrate();
-            soundHelper.playHoldDeviceUp();
-            return;
-        }
-        vibratorHelper.stopVibrating();
+//        if(sensorHelper.orientationAngles[1]>30 || sensorHelper.orientationAngles[1]<-5 || Math.abs(sensorHelper.orientationAngles[2])>20){
+//            vibratorHelper.vibrate();
+//            for(int i=0;i<numLabelRows;i++){
+//                for(int j=0;j<numLabelCols;j++){
+//                    text_array[i][j].setText("");
+//                }
+//            }
+//            text_array[1][0].setText("Παρακαλώ κρατήστε όρθια τη συσκευή");
+//            text_array[1][0].setTextColor(Color.WHITE);
+//            soundHelper.playHoldDeviceUp();
+//            return;
+//        }
+//        vibratorHelper.stopVibrating();
 
         Image depthImage = null;
         Frame frame = arSceneView.getArFrame();
@@ -391,7 +391,6 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             for(int i=0;i<numLabelRows;i++){
                 for(int j=0;j<numLabelCols;j++){
                     text_array[i][j].setText("");
-                    text_array[i][j].setTextColor(Color.WHITE);
                 }
             }
 

@@ -27,13 +27,6 @@ public class VibratorHelper {
 
         isVibrating=true;
         vibrator.vibrate(VibrationEffect.createOneShot(1000,VibrationEffect.DEFAULT_AMPLITUDE));
-        for(int i=0;i<mainActivity.numLabelRows;i++){
-            for(int j=0;j<mainActivity.numLabelCols;j++){
-                mainActivity.text_array[i][j].setText("");
-            }
-        }
-        mainActivity.text_array[1][0].setText("Παρακαλώ κρατήστε όρθια τη συσκευή");
-        mainActivity.text_array[1][0].setTextColor(Color.WHITE);
     }
 
     public void stopVibrating(){
