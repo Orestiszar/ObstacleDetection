@@ -22,7 +22,7 @@ public class VibratorHelper {
         }
     }
 
-    public void vibrate(){//returns true if MainActivity.onSceneUpdate needs to stop
+    public void vibrate(){
         if(isVibrating) return;
 
         isVibrating=true;

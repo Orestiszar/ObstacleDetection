@@ -76,6 +76,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     private VibratorHelper vibratorHelper;
     private SoundHelper soundHelper;
     private ObstacleStateMachine obstacleStateMachine;
+    private SteepRoadStateMachine steepRoadStateMachine;
 
     public void startTimer(int delay){
         timer = new Timer("frame_timer");
@@ -157,6 +158,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         sensorHelper = new SensorHelper(this);
         vibratorHelper = new VibratorHelper(this);
         obstacleStateMachine = new ObstacleStateMachine(this,1000/timerPeriod); //num of fps so it takes a second
+        steepRoadStateMachine = new SteepRoadStateMachine(this, 1000/timerPeriod);
 
         outer_frame_layout = findViewById(R.id.outer_frame_layout);
         gyrotext = findViewById(R.id.gyrotext);
@@ -230,6 +232,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
                 int fps = Integer.parseInt(FPS_ET.getText().toString());
                 timerPeriod = 1000/fps;
                 obstacleStateMachine.setStates(fps);
+                steepRoadStateMachine.setStates(fps);
 
                 for(int i =0;i< numLabelRows ;i++){
                     for (int j=0;j<numLabelCols;j++){
@@ -331,19 +334,19 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         sensorHelper.updateOrientationAngles();
         gyrotext.setText(String.format(Locale.getDefault(),"x: %d \ny: %d\n z: %d", Math.round(sensorHelper.orientationAngles[0]),Math.round(sensorHelper.orientationAngles[1]),Math.round(sensorHelper.orientationAngles[2])));
 
-//        if(sensorHelper.orientationAngles[1]>30 || sensorHelper.orientationAngles[1]<-5 || Math.abs(sensorHelper.orientationAngles[2])>20){
-//            vibratorHelper.vibrate();
-//            for(int i=0;i<numLabelRows;i++){
-//                for(int j=0;j<numLabelCols;j++){
-//                    text_array[i][j].setText("");
-//                }
-//            }
-//            text_array[1][0].setText("Παρακαλώ κρατήστε όρθια τη συσκευή");
-//            text_array[1][0].setTextColor(Color.WHITE);
-//            soundHelper.playHoldDeviceUp();
-//            return;
-//        }
-//        vibratorHelper.stopVibrating();
+        if(sensorHelper.orientationAngles[1]>30 || sensorHelper.orientationAngles[1]<-5 || Math.abs(sensorHelper.orientationAngles[2])>20){
+            vibratorHelper.vibrate();
+            for(int i=0;i<numLabelRows;i++){
+                for(int j=0;j<numLabelCols;j++){
+                    text_array[i][j].setText("");
+                }
+            }
+            text_array[1][0].setText("Παρακαλώ κρατήστε όρθια τη συσκευή");
+            text_array[1][0].setTextColor(Color.WHITE);
+            soundHelper.playHoldDeviceUp();
+            return;
+        }
+        vibratorHelper.stopVibrating();
 
         Image depthImage = null;
         Frame frame = arSceneView.getArFrame();
@@ -378,7 +381,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
                     else text_array[i][j].setTextColor(Color.WHITE);
                 }
             }
-            if(soundHelper.announceSteepRoad(obstacleStateMachine.decideSteepAhead(steepRoadArr))) return;
+            if(soundHelper.announceSteepRoad(steepRoadStateMachine.decideSteepAhead(steepRoadArr))) return;
 
             soundHelper.announceObstacles(obstacleStateMachine.decideObstacles(obstacleArr));
 
