@@ -59,14 +59,14 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     private ImageView settingsButton;
     public TextView gyrotext;
 
-    private boolean depthMap=false;
-    private int[][] dist_matrix;
+    protected boolean depthMap=false;
+    protected int[][] dist_matrix;
     protected final int numLabelRows=4;
     protected final int numLabelCols=3;
-    private int [] lowBoundArr = new int[] {3000,5000,2000,2000};
-    private int [] highBoundArr = new int[] {10000,10000,6000,4000};
-    private int dynamic_weight = 5;
-    private int width_percentage = 80;
+    protected int [] lowBoundArr = new int[] {3000,5000,2000,2000};
+    protected int [] highBoundArr = new int[] {10000,10000,6000,4000};
+    protected int dynamic_weight = 5;
+    protected int width_percentage = 80;
 
     private Timer timer;
     private TimerTask timerTask;
@@ -77,6 +77,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     private SoundHelper soundHelper;
     private ObstacleStateMachine obstacleStateMachine;
     private SteepRoadStateMachine steepRoadStateMachine;
+    private DepthImageProcessor depthImageProcessor;
 
     public void startTimer(int delay){
         timer = new Timer("frame_timer");
@@ -159,6 +160,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         vibratorHelper = new VibratorHelper(this);
         obstacleStateMachine = new ObstacleStateMachine(this,1000/timerPeriod); //num of fps so it takes a second
         steepRoadStateMachine = new SteepRoadStateMachine(this, 1000/timerPeriod);
+        depthImageProcessor =  new DepthImageProcessor();
 
         outer_frame_layout = findViewById(R.id.outer_frame_layout);
         gyrotext = findViewById(R.id.gyrotext);
@@ -353,9 +355,9 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         try {
             depthImage = frame.acquireDepthImage16Bits(); //160*90
             // Use the depth image here.
-            if(depthMap) custom_imageview.setImageBitmap(ImageToBitmap(depthImage));
+            if(depthMap) custom_imageview.setImageBitmap(depthImageProcessor.ImageToBitmap(depthImage, numLabelRows, lowBoundArr,highBoundArr));
 
-            dist_matrix = getAverageDistances(depthImage,numLabelRows,numLabelCols);
+            dist_matrix = depthImageProcessor.getAverageDistances(depthImage,numLabelRows,numLabelCols, width_percentage);
 
             //to check and save if an obstacle exists in this column
             boolean [][] obstacleArr = new boolean[numLabelRows][numLabelCols]; //init to false
@@ -404,71 +406,71 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         }
     }
 
-    public Bitmap ImageToBitmap(Image depthImage) {
-        // The depth image has a single plane, which stores depth for each
-        // pixel as 16-bit unsigned integers.
-
-        Image.Plane plane = depthImage.getPlanes()[0];
-        ByteBuffer buffer = plane.getBuffer().order(ByteOrder.nativeOrder());
-
-        Bitmap bitmap = Bitmap.createBitmap(depthImage.getWidth(), depthImage.getHeight(), Bitmap.Config.ARGB_8888);
-        int byteIndex;
-        int dist;
-        int width_increment = depthImage.getWidth()/numLabelRows;
-
-        for(int height=0;height<depthImage.getHeight(); height++){
-            for(int width=0; width<depthImage.getWidth();width++){
-                byteIndex = width * plane.getPixelStride() + height * plane.getRowStride();
-                dist = buffer.getShort(byteIndex);
-                if(dist<0) dist = 65536-dist;//to deal with overflowing due to signed shorts
-                if(dist>=0 && dist<lowBoundArr[width/width_increment]){
-                    bitmap.setPixel(width,height,Color.argb(128, 255,0,0));
-                }
-                else if(dist>=lowBoundArr[width/width_increment] && dist<highBoundArr[width/width_increment]){
-                    bitmap.setPixel(width,height,Color.argb(128, 0,255,0));
-                }
-                else{
-                    bitmap.setPixel(width,height,Color.argb(128, 0,0,255));
-                }
-            }
-        }
-        //rotate 90 degrees because depthImage is in landscape mode
-        Matrix matrix = new Matrix();
-        matrix.postRotate(90);
-        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-    }
-
-    public int getAverageSubImageDist(Image depthImage, int heightstart, int heightend, int widthstart, int widthend){
-        //starts inclusive, ends not inclusive
-        Image.Plane plane = depthImage.getPlanes()[0];
-        ByteBuffer buffer = plane.getBuffer().order(ByteOrder.nativeOrder());
-        int byteIndex, dist, mean_value=0;
-        for(int height=heightstart;height<heightend; height++){
-            for(int width=widthstart; width<widthend;width++){
-                byteIndex = width * plane.getPixelStride() + height * plane.getRowStride();
-                dist = buffer.getShort(byteIndex);
-                if(dist<0) dist = 65536-dist;//to deal with overflowing due to signed shorts
-                mean_value += dist;
-            }
-        }
-        return mean_value/((heightend-heightstart)*(widthend-widthstart));
-    }
-
-    public int[][] getAverageDistances(Image depthImage, int rows, int cols){
-        int [][] distance_matrix = new int[rows][cols];
-
-        int true_height = (int) (depthImage.getHeight()*(width_percentage/100f));//rotated image
-        int height_offset = (depthImage.getHeight() - true_height)/2;
-
-        int height_increment = true_height/cols;//Image needs to be rotated 90 degrees so use cols instead of rows here
-        int width_increment =  depthImage.getWidth()/rows;
-
-        for(int i=0; i<rows;i++){//assume the image is horizontal
-            for(int j=0;j<cols;j++){
-                distance_matrix[i][cols-j-1] = getAverageSubImageDist(depthImage,height_offset + j*height_increment,height_offset + (j+1)*height_increment,i*width_increment,(i+1)*width_increment);
-            }
-        }
-
-        return distance_matrix;
-    }
+//    public Bitmap ImageToBitmap(Image depthImage) {
+//        // The depth image has a single plane, which stores depth for each
+//        // pixel as 16-bit unsigned integers.
+//
+//        Image.Plane plane = depthImage.getPlanes()[0];
+//        ByteBuffer buffer = plane.getBuffer().order(ByteOrder.nativeOrder());
+//
+//        Bitmap bitmap = Bitmap.createBitmap(depthImage.getWidth(), depthImage.getHeight(), Bitmap.Config.ARGB_8888);
+//        int byteIndex;
+//        int dist;
+//        int width_increment = depthImage.getWidth()/numLabelRows;
+//
+//        for(int height=0;height<depthImage.getHeight(); height++){
+//            for(int width=0; width<depthImage.getWidth();width++){
+//                byteIndex = width * plane.getPixelStride() + height * plane.getRowStride();
+//                dist = buffer.getShort(byteIndex);
+//                if(dist<0) dist = 65536-dist;//to deal with overflowing due to signed shorts
+//                if(dist>=0 && dist<lowBoundArr[width/width_increment]){
+//                    bitmap.setPixel(width,height,Color.argb(128, 255,0,0));
+//                }
+//                else if(dist>=lowBoundArr[width/width_increment] && dist<highBoundArr[width/width_increment]){
+//                    bitmap.setPixel(width,height,Color.argb(128, 0,255,0));
+//                }
+//                else{
+//                    bitmap.setPixel(width,height,Color.argb(128, 0,0,255));
+//                }
+//            }
+//        }
+//        //rotate 90 degrees because depthImage is in landscape mode
+//        Matrix matrix = new Matrix();
+//        matrix.postRotate(90);
+//        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+//    }
+//
+//    public int getAverageSubImageDist(Image depthImage, int heightstart, int heightend, int widthstart, int widthend){
+//        //starts inclusive, ends not inclusive
+//        Image.Plane plane = depthImage.getPlanes()[0];
+//        ByteBuffer buffer = plane.getBuffer().order(ByteOrder.nativeOrder());
+//        int byteIndex, dist, mean_value=0;
+//        for(int height=heightstart;height<heightend; height++){
+//            for(int width=widthstart; width<widthend;width++){
+//                byteIndex = width * plane.getPixelStride() + height * plane.getRowStride();
+//                dist = buffer.getShort(byteIndex);
+//                if(dist<0) dist = 65536-dist;//to deal with overflowing due to signed shorts
+//                mean_value += dist;
+//            }
+//        }
+//        return mean_value/((heightend-heightstart)*(widthend-widthstart));
+//    }
+//
+//    public int[][] getAverageDistances(Image depthImage, int rows, int cols){
+//        int [][] distance_matrix = new int[rows][cols];
+//
+//        int true_height = (int) (depthImage.getHeight()*(width_percentage/100f));//rotated image
+//        int height_offset = (depthImage.getHeight() - true_height)/2;
+//
+//        int height_increment = true_height/cols;//Image needs to be rotated 90 degrees so use cols instead of rows here
+//        int width_increment =  depthImage.getWidth()/rows;
+//
+//        for(int i=0; i<rows;i++){//assume the image is horizontal
+//            for(int j=0;j<cols;j++){
+//                distance_matrix[i][cols-j-1] = getAverageSubImageDist(depthImage,height_offset + j*height_increment,height_offset + (j+1)*height_increment,i*width_increment,(i+1)*width_increment);
+//            }
+//        }
+//
+//        return distance_matrix;
+//    }
 }
