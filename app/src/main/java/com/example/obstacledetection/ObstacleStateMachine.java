@@ -1,6 +1,7 @@
 package com.example.obstacledetection;
 
-import java.security.PublicKey;
+import android.graphics.Color;
+
 import java.util.Arrays;
 
 public class ObstacleStateMachine {
@@ -19,7 +20,20 @@ public class ObstacleStateMachine {
         }
     }
 
-    public boolean[] decideObstacles(boolean [][] obstacleArr){
+    public boolean[][] decideObstacles(int[][] dist_matrix, float current_angle){
+        boolean [][] obstacleArr = new boolean[ARSettings.numLabelRows][ARSettings.numLabelCols];
+        for(int i=0;i<ARSettings.numLabelRows;i++) {
+            for (int j = 0; j < ARSettings.numLabelCols; j++) {
+                int dyn_bound = (int)(ARSettings.dynamic_weight*current_angle);
+                if(dist_matrix[i][j]<= ARSettings.lowBoundArr[i] + dyn_bound){
+                    obstacleArr[i][j] = true;
+                }
+            }
+        }
+    return obstacleArr;
+    }
+
+    public boolean[] updateObstacleStateMachine(boolean [][] obstacleArr){
         boolean[] result = new boolean[ARSettings.numLabelCols];
 
         for (int i = 0; i < ARSettings.numLabelRows; i++) {

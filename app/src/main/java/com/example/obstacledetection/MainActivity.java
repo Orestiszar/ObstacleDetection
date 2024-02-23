@@ -57,17 +57,9 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     private ImageView custom_imageview;
     private Switch depthSwitch;
     private ImageView settingsButton;
-    public TextView gyrotext;
+//    public TextView gyrotext;
 
     private int[][] dist_matrix;
-//    protected boolean depthMap=false;
-//    protected final int numLabelRows=4;
-//    protected final int numLabelCols=3;
-//    protected int [] lowBoundArr = new int[] {3000,5000,2000,2000};
-//    protected int [] highBoundArr = new int[] {10000,10000,6000,4000};
-//    protected int dynamic_weight = 5;
-//    protected int width_percentage = 80;
-//    protected int timerPeriod = 1000/10;
 
     private Timer timer;
     private TimerTask timerTask;
@@ -164,7 +156,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         depthImageProcessor =  new DepthImageProcessor();
 
         outer_frame_layout = findViewById(R.id.outer_frame_layout);
-        gyrotext = findViewById(R.id.gyrotext);
+//        gyrotext = findViewById(R.id.gyrotext);
         custom_imageview = new ImageView(this);
         outer_frame_layout.addView(custom_imageview);
 
@@ -335,7 +327,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         }
 
         sensorHelper.updateOrientationAngles();
-        gyrotext.setText(String.format(Locale.getDefault(),"x: %d \ny: %d\n z: %d", Math.round(sensorHelper.orientationAngles[0]),Math.round(sensorHelper.orientationAngles[1]),Math.round(sensorHelper.orientationAngles[2])));
+//        gyrotext.setText(String.format(Locale.getDefault(),"x: %d \ny: %d\n z: %d", Math.round(sensorHelper.orientationAngles[0]),Math.round(sensorHelper.orientationAngles[1]),Math.round(sensorHelper.orientationAngles[2])));
 
         if(sensorHelper.orientationAngles[1]>30 || sensorHelper.orientationAngles[1]<-5 || Math.abs(sensorHelper.orientationAngles[2])>20){
             vibratorHelper.vibrate();
@@ -360,33 +352,20 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 
             dist_matrix = depthImageProcessor.getAverageDistances(depthImage,ARSettings.numLabelRows,ARSettings.numLabelCols, ARSettings.width_percentage);
 
-            //to check and save if an obstacle exists in this column
             boolean [][] obstacleArr = new boolean[ARSettings.numLabelRows][ARSettings.numLabelCols]; //init to false
             boolean [] steepRoadArr = new boolean[ARSettings.numLabelCols]; //init to false
-
-            for(int i=0;i<ARSettings.numLabelRows;i++){
-                for(int j=0;j<ARSettings.numLabelCols;j++){
-
+            obstacleArr = obstacleStateMachine.decideObstacles(dist_matrix, sensorHelper.orientationAngles[1]);
+            steepRoadArr = steepRoadStateMachine.decideSteepAhead(dist_matrix,sensorHelper.orientationAngles[1]);
+            for(int i=0;i<ARSettings.numLabelRows;i++) {
+                for (int j = 0; j < ARSettings.numLabelCols; j++) {
                     text_array[i][j].setText(Integer.toString(dist_matrix[i][j]));
-
-                    int dyn_bound = (int)((ARSettings.dynamic_weight*sensorHelper.orientationAngles[1]*dist_matrix[i][j])/1000);
-
-                    if(i==ARSettings.numLabelRows-1 && (dist_matrix[i][j] >= ARSettings.highBoundArr[i] + dyn_bound)){ //for steep roads
-                        text_array[i][j].setTextColor(Color.BLUE);
-                        steepRoadArr[j] = true;
-                        continue;
-                    }
-
-                    if(dist_matrix[i][j]<= ARSettings.lowBoundArr[i] + dyn_bound){
-                        text_array[i][j].setTextColor(Color.RED);
-                        obstacleArr[i][j] = true;
-                    }
+                    if(i == ARSettings.numLabelRows-1 && steepRoadArr[j]) text_array[i][j].setTextColor(Color.BLUE);
+                    else if(obstacleArr[i][j]) text_array[i][j].setTextColor(Color.RED);
                     else text_array[i][j].setTextColor(Color.WHITE);
                 }
             }
-            if(soundHelper.announceSteepRoad(steepRoadStateMachine.decideSteepAhead(steepRoadArr))) return;
-
-            soundHelper.announceObstacles(obstacleStateMachine.decideObstacles(obstacleArr));
+            if(soundHelper.announceSteepRoad(steepRoadStateMachine.updateSteepAheadStateMachine(steepRoadArr))) return;
+            soundHelper.announceObstacles(obstacleStateMachine.updateObstacleStateMachine(obstacleArr));
 
         } catch (NotYetAvailableException e) {
             // This means that depth data is not available yet.

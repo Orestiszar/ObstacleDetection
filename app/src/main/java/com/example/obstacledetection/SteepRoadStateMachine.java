@@ -16,7 +16,18 @@ public class SteepRoadStateMachine {
         Arrays.fill(steepArr,0);
     }
 
-    public boolean[] decideSteepAhead(boolean [] steepRoadArr){
+    public boolean[] decideSteepAhead(int[][] dist_matrix, float current_angle){
+        boolean [] steepRoadArr = new boolean[ARSettings.numLabelCols];
+        for(int j=0;j<ARSettings.numLabelCols;j++) {
+            int dyn_bound = (int)(ARSettings.dynamic_weight*current_angle);
+            if(dist_matrix[ARSettings.numLabelRows-1][j]>= ARSettings.highBoundArr[ARSettings.numLabelRows-1] + dyn_bound){
+                steepRoadArr[j] = true;
+            }
+        }
+        return steepRoadArr;
+    }
+
+    public boolean[] updateSteepAheadStateMachine(boolean [] steepRoadArr){
         boolean[] result = new boolean[ARSettings.numLabelCols];
 
         for (int i = 0; i < ARSettings.numLabelCols; i++) {
