@@ -59,18 +59,19 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     private ImageView settingsButton;
     public TextView gyrotext;
 
-    protected boolean depthMap=false;
-    protected int[][] dist_matrix;
-    protected final int numLabelRows=4;
-    protected final int numLabelCols=3;
-    protected int [] lowBoundArr = new int[] {3000,5000,2000,2000};
-    protected int [] highBoundArr = new int[] {10000,10000,6000,4000};
-    protected int dynamic_weight = 5;
-    protected int width_percentage = 80;
+    private int[][] dist_matrix;
+//    protected boolean depthMap=false;
+//    protected final int numLabelRows=4;
+//    protected final int numLabelCols=3;
+//    protected int [] lowBoundArr = new int[] {3000,5000,2000,2000};
+//    protected int [] highBoundArr = new int[] {10000,10000,6000,4000};
+//    protected int dynamic_weight = 5;
+//    protected int width_percentage = 80;
+//    protected int timerPeriod = 1000/10;
 
     private Timer timer;
     private TimerTask timerTask;
-    private int timerPeriod = 1000/10;
+
 
     private SensorHelper sensorHelper;
     private VibratorHelper vibratorHelper;
@@ -88,7 +89,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             }
         };
         try {
-            timer.schedule(timerTask,delay,timerPeriod);
+            timer.schedule(timerTask,delay,ARSettings.timerPeriod);
         }
         catch (Exception e){
             e.printStackTrace();
@@ -158,8 +159,8 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         soundHelper = new SoundHelper(this);
         sensorHelper = new SensorHelper(this);
         vibratorHelper = new VibratorHelper(this);
-        obstacleStateMachine = new ObstacleStateMachine(this,1000/timerPeriod); //num of fps so it takes a second
-        steepRoadStateMachine = new SteepRoadStateMachine(this, 1000/timerPeriod);
+        obstacleStateMachine = new ObstacleStateMachine(1000/ARSettings.timerPeriod); //num of fps so it takes a second
+        steepRoadStateMachine = new SteepRoadStateMachine(1000/ARSettings.timerPeriod);
         depthImageProcessor =  new DepthImageProcessor();
 
         outer_frame_layout = findViewById(R.id.outer_frame_layout);
@@ -169,7 +170,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 
         depthSwitch = findViewById(R.id.depthSwitch);
         depthSwitch.setOnCheckedChangeListener((CompoundButton compoundButton, boolean b)->{
-            depthMap = b;
+            ARSettings.depthMap = b;
             if(!b){
                 custom_imageview.setImageBitmap(null);
             }});
@@ -208,13 +209,13 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         EditText FPS_ET = popupView.findViewById(R.id.EtFPS);
 
         for(int i=0;i<4;i++) {
-            ETArr[i][0].setText(Integer.toString(lowBoundArr[i]));
-            ETArr[i][1].setText(Integer.toString(highBoundArr[i]));
+            ETArr[i][0].setText(Integer.toString(ARSettings.lowBoundArr[i]));
+            ETArr[i][1].setText(Integer.toString(ARSettings.highBoundArr[i]));
         }
 
-        dynamic_weight_ET.setText(Integer.toString(dynamic_weight));
-        width_offset_ET.setText(Integer.toString(width_percentage));
-        FPS_ET.setText(Integer.toString(1000/timerPeriod));
+        dynamic_weight_ET.setText(Integer.toString(ARSettings.dynamic_weight));
+        width_offset_ET.setText(Integer.toString(ARSettings.width_percentage));
+        FPS_ET.setText(Integer.toString(1000/ARSettings.timerPeriod));
 
         Button setButton = popupView.findViewById(R.id.setPopupParamsButton);
         setButton.setOnClickListener(new View.OnClickListener() {
@@ -222,22 +223,22 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             public void onClick(View view) {
 
                 for(int i=0;i<4;i++) {
-                    lowBoundArr[i] = Integer.parseInt(ETArr[i][0].getText().toString());
-                    highBoundArr[i] = Integer.parseInt(ETArr[i][1].getText().toString());
+                    ARSettings.lowBoundArr[i] = Integer.parseInt(ETArr[i][0].getText().toString());
+                    ARSettings.highBoundArr[i] = Integer.parseInt(ETArr[i][1].getText().toString());
                 }
-                dynamic_weight = Integer.parseInt(dynamic_weight_ET.getText().toString());
+                ARSettings.dynamic_weight = Integer.parseInt(dynamic_weight_ET.getText().toString());
 
-                width_percentage = Integer.parseInt(width_offset_ET.getText().toString());
-                if(width_percentage>100) width_percentage=100;
-                else if(width_percentage<0) width_percentage=0;
+                ARSettings.width_percentage = Integer.parseInt(width_offset_ET.getText().toString());
+                if(ARSettings.width_percentage>100) ARSettings.width_percentage=100;
+                else if(ARSettings.width_percentage<0) ARSettings.width_percentage=0;
 
                 int fps = Integer.parseInt(FPS_ET.getText().toString());
-                timerPeriod = 1000/fps;
+                ARSettings.timerPeriod = 1000/fps;
                 obstacleStateMachine.setStates(fps);
                 steepRoadStateMachine.setStates(fps);
 
-                for(int i =0;i< numLabelRows ;i++){
-                    for (int j=0;j<numLabelCols;j++){
+                for(int i =0;i< ARSettings.numLabelRows ;i++){
+                    for (int j=0;j<ARSettings.numLabelCols;j++){
                         outer_frame_layout.removeView(text_array[i][j]);
                     }
                 }
@@ -297,14 +298,14 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             }
             // new width and new height are the dimensions of the screen that the labels need to represent. The ImageView is set to fit center.
 
-            int true_width = (int)(newWidth*(width_percentage/100f));
+            int true_width = (int)(newWidth*(ARSettings.width_percentage/100f));
             int widthOffset= (newWidth-true_width)/2;
 
-            int horizontalStep = true_width/numLabelCols;
-            int verticalStep = newHeight/numLabelRows;
-            text_array = new TextView[numLabelRows][numLabelCols];
-            for(int i=0; i<numLabelRows;i++){
-                for(int j=0;j<numLabelCols;j++){
+            int horizontalStep = true_width/ARSettings.numLabelCols;
+            int verticalStep = newHeight/ARSettings.numLabelRows;
+            text_array = new TextView[ARSettings.numLabelRows][ARSettings.numLabelCols];
+            for(int i=0; i<ARSettings.numLabelRows;i++){
+                for(int j=0;j<ARSettings.numLabelCols;j++){
                     text_array[i][j] = new TextView(this);
                     FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
                             ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -338,8 +339,8 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 
         if(sensorHelper.orientationAngles[1]>30 || sensorHelper.orientationAngles[1]<-5 || Math.abs(sensorHelper.orientationAngles[2])>20){
             vibratorHelper.vibrate();
-            for(int i=0;i<numLabelRows;i++){
-                for(int j=0;j<numLabelCols;j++){
+            for(int i=0;i<ARSettings.numLabelRows;i++){
+                for(int j=0;j<ARSettings.numLabelCols;j++){
                     text_array[i][j].setText("");
                 }
             }
@@ -355,28 +356,28 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         try {
             depthImage = frame.acquireDepthImage16Bits(); //160*90
             // Use the depth image here.
-            if(depthMap) custom_imageview.setImageBitmap(depthImageProcessor.ImageToBitmap(depthImage, numLabelRows, lowBoundArr,highBoundArr));
+            if(ARSettings.depthMap) custom_imageview.setImageBitmap(depthImageProcessor.ImageToBitmap(depthImage, ARSettings.numLabelRows, ARSettings.lowBoundArr,ARSettings.highBoundArr));
 
-            dist_matrix = depthImageProcessor.getAverageDistances(depthImage,numLabelRows,numLabelCols, width_percentage);
+            dist_matrix = depthImageProcessor.getAverageDistances(depthImage,ARSettings.numLabelRows,ARSettings.numLabelCols, ARSettings.width_percentage);
 
             //to check and save if an obstacle exists in this column
-            boolean [][] obstacleArr = new boolean[numLabelRows][numLabelCols]; //init to false
-            boolean [] steepRoadArr = new boolean[numLabelCols]; //init to false
+            boolean [][] obstacleArr = new boolean[ARSettings.numLabelRows][ARSettings.numLabelCols]; //init to false
+            boolean [] steepRoadArr = new boolean[ARSettings.numLabelCols]; //init to false
 
-            for(int i=0;i<numLabelRows;i++){
-                for(int j=0;j<numLabelCols;j++){
+            for(int i=0;i<ARSettings.numLabelRows;i++){
+                for(int j=0;j<ARSettings.numLabelCols;j++){
 
                     text_array[i][j].setText(Integer.toString(dist_matrix[i][j]));
 
-                    int dyn_bound = (int)((dynamic_weight*sensorHelper.orientationAngles[1]*dist_matrix[i][j])/1000);
+                    int dyn_bound = (int)((ARSettings.dynamic_weight*sensorHelper.orientationAngles[1]*dist_matrix[i][j])/1000);
 
-                    if(i==numLabelRows-1 && (dist_matrix[i][j] >= highBoundArr[i] + dyn_bound)){ //for steep roads
+                    if(i==ARSettings.numLabelRows-1 && (dist_matrix[i][j] >= ARSettings.highBoundArr[i] + dyn_bound)){ //for steep roads
                         text_array[i][j].setTextColor(Color.BLUE);
                         steepRoadArr[j] = true;
                         continue;
                     }
 
-                    if(dist_matrix[i][j]<= lowBoundArr[i] + dyn_bound){
+                    if(dist_matrix[i][j]<= ARSettings.lowBoundArr[i] + dyn_bound){
                         text_array[i][j].setTextColor(Color.RED);
                         obstacleArr[i][j] = true;
                     }
@@ -393,8 +394,8 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             // feature points. This can happen when there is no motion, or when the
             // camera loses its ability to track objects in the surrounding
             // environment.
-            for(int i=0;i<numLabelRows;i++){
-                for(int j=0;j<numLabelCols;j++){
+            for(int i=0;i<ARSettings.numLabelRows;i++){
+                for(int j=0;j<ARSettings.numLabelCols;j++){
                     text_array[i][j].setText("");
                 }
             }

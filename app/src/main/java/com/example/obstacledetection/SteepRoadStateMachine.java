@@ -3,8 +3,6 @@ package com.example.obstacledetection;
 import java.util.Arrays;
 
 public class SteepRoadStateMachine {
-
-    private MainActivity mainActivity;
     private int [] steepArr;
     private int states;
 
@@ -12,17 +10,16 @@ public class SteepRoadStateMachine {
         this.states = states;
     }
 
-    public SteepRoadStateMachine(MainActivity mainActivity, int states) {
-        this.mainActivity = mainActivity;
+    public SteepRoadStateMachine(int states) {
         this.states = states;
-        steepArr = new int[this.mainActivity.numLabelCols];
+        steepArr = new int[ARSettings.numLabelCols];
         Arrays.fill(steepArr,0);
     }
 
     public boolean[] decideSteepAhead(boolean [] steepRoadArr){
-        boolean[] result = new boolean[mainActivity.numLabelCols];
+        boolean[] result = new boolean[ARSettings.numLabelCols];
 
-        for (int i = 0; i < mainActivity.numLabelCols; i++) {
+        for (int i = 0; i < ARSettings.numLabelCols; i++) {
 
             if(steepRoadArr[i] && steepArr[i]<states-1) steepArr[i]++;
 

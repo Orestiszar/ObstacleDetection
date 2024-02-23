@@ -4,7 +4,6 @@ import java.security.PublicKey;
 import java.util.Arrays;
 
 public class ObstacleStateMachine {
-    private MainActivity mainActivity;
     private int [][] stateArr;
     private int states;
 
@@ -12,20 +11,19 @@ public class ObstacleStateMachine {
         this.states = states;
     }
 
-    public ObstacleStateMachine(MainActivity mainActivity, int states) {
-        this.mainActivity = mainActivity;
+    public ObstacleStateMachine(int states) {
         this.states = states;
-        stateArr = new int[this.mainActivity.numLabelRows][this.mainActivity.numLabelCols];
+        stateArr = new int[ARSettings.numLabelRows][ARSettings.numLabelCols];
         for(int[] row:stateArr){
             Arrays.fill(row,0);
         }
     }
 
     public boolean[] decideObstacles(boolean [][] obstacleArr){
-        boolean[] result = new boolean[mainActivity.numLabelCols];
+        boolean[] result = new boolean[ARSettings.numLabelCols];
 
-        for (int i = 0; i < mainActivity.numLabelRows; i++) {
-            for (int j = 0; j < mainActivity.numLabelCols; j++) {
+        for (int i = 0; i < ARSettings.numLabelRows; i++) {
+            for (int j = 0; j < ARSettings.numLabelCols; j++) {
 
                 if(obstacleArr[i][j] && stateArr[i][j]<states-1) stateArr[i][j]++;
 
