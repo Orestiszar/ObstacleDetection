@@ -338,7 +338,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             }
             text_array[1][0].setText("Παρακαλώ κρατήστε όρθια τη συσκευή");
             text_array[1][0].setTextColor(Color.WHITE);
-            soundHelper.playHoldDeviceUp();
+            soundHelper.playSound("hold_device_up");
             return;
         }
         vibratorHelper.stopVibrating();
@@ -352,10 +352,8 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 
             dist_matrix = depthImageProcessor.getAverageDistances(depthImage,ARSettings.numLabelRows,ARSettings.numLabelCols, ARSettings.width_percentage);
 
-            boolean [][] obstacleArr = new boolean[ARSettings.numLabelRows][ARSettings.numLabelCols]; //init to false
-            boolean [] steepRoadArr = new boolean[ARSettings.numLabelCols]; //init to false
-            obstacleArr = obstacleStateMachine.decideObstacles(dist_matrix, sensorHelper.orientationAngles[1]);
-            steepRoadArr = steepRoadStateMachine.decideSteepAhead(dist_matrix,sensorHelper.orientationAngles[1]);
+            boolean [][] obstacleArr = obstacleStateMachine.decideObstacles(dist_matrix, sensorHelper.orientationAngles[1]);
+            boolean [] steepRoadArr = steepRoadStateMachine.decideSteepAhead(dist_matrix,sensorHelper.orientationAngles[1]);
             for(int i=0;i<ARSettings.numLabelRows;i++) {
                 for (int j = 0; j < ARSettings.numLabelCols; j++) {
                     text_array[i][j].setText(Integer.toString(dist_matrix[i][j]));

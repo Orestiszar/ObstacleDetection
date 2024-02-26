@@ -1,7 +1,4 @@
 package com.example.obstacledetection;
-
-import android.graphics.Color;
-
 import java.util.Arrays;
 
 public class ObstacleStateMachine {

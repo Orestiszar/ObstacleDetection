@@ -2,112 +2,66 @@ package com.example.obstacledetection;
 
 import android.media.MediaPlayer;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class SoundHelper {
     private MainActivity mainActivity;
-    private MediaPlayer[] mp;
     private boolean isPlaying=false;
+    private Map<String,MediaPlayer> soundMap;
 
     public SoundHelper(MainActivity mainActivity) {
         this.mainActivity = mainActivity;
-        mp = new MediaPlayer[] {MediaPlayer.create(mainActivity, R.raw.obstacle_left),
-                MediaPlayer.create(mainActivity, R.raw.obstacle_right),
-                MediaPlayer.create(mainActivity, R.raw.obstacle_ahead),
-                MediaPlayer.create(mainActivity, R.raw.way_blocked),
-                MediaPlayer.create(mainActivity, R.raw.left_and_right),
-                MediaPlayer.create(mainActivity, R.raw.hold_device_up),
-                MediaPlayer.create(mainActivity, R.raw.steep_ahead),
-                MediaPlayer.create(mainActivity, R.raw.steep_left),
-                MediaPlayer.create(mainActivity, R.raw.steep_right),
-                MediaPlayer.create(mainActivity, R.raw.steep_right_and_left)
-        };
-        for(MediaPlayer player :mp){
-            player.setOnCompletionListener((MediaPlayer mediaPlayer)->{
+
+        soundMap = new HashMap<String, MediaPlayer>();
+        soundMap.put("obstacle_left",MediaPlayer.create(mainActivity, R.raw.obstacle_left));
+        soundMap.put("obstacle_right",MediaPlayer.create(mainActivity, R.raw.obstacle_right));
+        soundMap.put("obstacle_ahead",MediaPlayer.create(mainActivity, R.raw.obstacle_ahead));
+        soundMap.put("way_blocked",MediaPlayer.create(mainActivity, R.raw.way_blocked));
+        soundMap.put("left_and_right",MediaPlayer.create(mainActivity, R.raw.left_and_right));
+        soundMap.put("hold_device_up",MediaPlayer.create(mainActivity, R.raw.hold_device_up));
+        soundMap.put("steep_ahead",MediaPlayer.create(mainActivity, R.raw.steep_ahead));
+        soundMap.put("steep_left",MediaPlayer.create(mainActivity, R.raw.steep_left));
+        soundMap.put("steep_right",MediaPlayer.create(mainActivity, R.raw.steep_right));
+        soundMap.put("steep_right_and_left",MediaPlayer.create(mainActivity, R.raw.steep_right_and_left));
+        for(Map.Entry<String,MediaPlayer> entry :soundMap.entrySet()){
+            entry.getValue().setOnCompletionListener((MediaPlayer mediaPlayer)->{
                 isPlaying = false;
             });
         }
     }
 
-    public void playObstacleLeft(){
+    public void playSound(String sound){
         if(isPlaying) return;
         isPlaying=true;
-        mp[0].start();
-    }
-
-    public void playObstacleRight(){
-        if(isPlaying) return;
-        isPlaying=true;
-        mp[1].start();
-    }
-
-    public void playObstacleAhead(){
-        if(isPlaying) return;
-        isPlaying=true;
-        mp[2].start();
-    }
-
-    public void playWayBlocked(){
-        if(isPlaying) return;
-        isPlaying=true;
-        mp[3].start();
-    }
-
-    public void playLeftAndRight(){
-        if(isPlaying) return;
-        isPlaying=true;
-        mp[4].start();
-    }
-
-    public void playHoldDeviceUp(){
-        if(isPlaying) return;
-        isPlaying=true;
-        mp[5].start();
-    }
-
-    public void playSteepAhead(){
-        if(isPlaying) return;
-        isPlaying=true;
-        mp[6].start();
-    }
-
-    public void playSteepLeft(){
-        if(isPlaying) return;
-        isPlaying=true;
-        mp[7].start();
-    }
-
-    public void playSteepRight(){
-        if(isPlaying) return;
-        isPlaying=true;
-        mp[8].start();
-    }
-
-    public void playSteepLeftAndRight(){
-        if(isPlaying) return;
-        isPlaying=true;
-        mp[9].start();
+        soundMap.get(sound).start();
     }
 
     public boolean announceSteepRoad(boolean [] steepRoadArr){
 
         if(steepRoadArr[0] && steepRoadArr[1] && steepRoadArr[2]){
             //way too steep
-            playSteepAhead();
+            playSound("steep_ahead");
         }
         else if(steepRoadArr[0] && steepRoadArr[2]){
             //steep left+right
-            playSteepLeftAndRight();
+            playSound("steep_right_and_left");
+
         }
         else if(steepRoadArr[0]){
             //left
-            playSteepLeft();
+            playSound("steep_left");
+
         }
         else if(steepRoadArr[2]){
             //right
-            playSteepRight();
+            playSound("steep_right");
+
         }
         else if(steepRoadArr[1]){
             //ahead
-            playSteepAhead();
+            playSound("steep_ahead");
+
         }
         else{
             return false;
@@ -116,28 +70,33 @@ public class SoundHelper {
     }
 
     public void announceObstacles(boolean [] obstacleArr){
-        //if there is an obstacles in the middle and the left we call left
-        //if there is an obstacles in the middle and the right we call right
+        //if there is an obstacle in the middle and the left we call left
+        //if there is an obstacle in the middle and the right we call right
         //we only call middle if the obstacle is specifically in the middle
 
         if(obstacleArr[0] && obstacleArr[1] && obstacleArr[2]){
-            playWayBlocked();
+            playSound("way_blocked");
+
         }
         else if(obstacleArr[0] && obstacleArr[2]){
             //left+right
-            playLeftAndRight();
+            playSound("left_and_right");
+
         }
         else if(obstacleArr[0]){
             //left
-            playObstacleLeft();
+            playSound("obstacle_left");
+
         }
         else if(obstacleArr[2]){
             //right
-            playObstacleRight();
+            playSound("obstacle_right");
+
         }
         else if(obstacleArr[1]){
             //ahead
-            playObstacleAhead();
+            playSound("obstacle_ahead");
+
         }
 
     }
