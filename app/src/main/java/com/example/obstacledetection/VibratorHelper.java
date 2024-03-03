@@ -26,10 +26,17 @@ public class VibratorHelper {
         if(isVibrating) return;
 
         isVibrating=true;
-        vibrator.vibrate(VibrationEffect.createOneShot(1000,VibrationEffect.DEFAULT_AMPLITUDE));
+//        vibrator.vibrate(VibrationEffect.createOneShot(1000,VibrationEffect.DEFAULT_AMPLITUDE));
+
+        long[] timings = new long[] {0, 1000,1000};
+        int repeat = 1;
+        VibrationEffect repeatingEffect = VibrationEffect.createWaveform(timings, repeat);
+
+        vibrator.vibrate(repeatingEffect);
     }
 
     public void stopVibrating(){
         isVibrating=false;
+        vibrator.cancel();
     }
 }

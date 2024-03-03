@@ -38,35 +38,13 @@ public class SoundHelper {
     }
 
     public boolean announceSteepRoad(boolean [] steepRoadArr){
-
-        if(steepRoadArr[0] && steepRoadArr[1] && steepRoadArr[2]){
-            //way too steep
-            playSound("steep_ahead");
-        }
-        else if(steepRoadArr[0] && steepRoadArr[2]){
-            //steep left+right
-            playSound("steep_right_and_left");
-
-        }
-        else if(steepRoadArr[0]){
-            //left
-            playSound("steep_left");
-
-        }
-        else if(steepRoadArr[2]){
-            //right
-            playSound("steep_right");
-
-        }
-        else if(steepRoadArr[1]){
-            //ahead
-            playSound("steep_ahead");
-
-        }
-        else{
-            return false;
-        }
-        return true;
+        if(steepRoadArr[0] && steepRoadArr[1] && steepRoadArr[2]) playSound("steep_ahead");//way too steep
+        else if(steepRoadArr[0] && steepRoadArr[2]) playSound("steep_right_and_left");//steep left+right
+        else if(steepRoadArr[0]) playSound("steep_left"); //left
+        else if(steepRoadArr[2]) playSound("steep_right");//right
+        else if(steepRoadArr[1]) playSound("steep_ahead"); //ahead
+        else return false;
+        return true; //used in mainactivity to determine if obstacle sounds are played(Steep roads have a )
     }
 
     public void announceObstacles(boolean [] obstacleArr){
@@ -74,30 +52,10 @@ public class SoundHelper {
         //if there is an obstacle in the middle and the right we call right
         //we only call middle if the obstacle is specifically in the middle
 
-        if(obstacleArr[0] && obstacleArr[1] && obstacleArr[2]){
-            playSound("way_blocked");
-
-        }
-        else if(obstacleArr[0] && obstacleArr[2]){
-            //left+right
-            playSound("left_and_right");
-
-        }
-        else if(obstacleArr[0]){
-            //left
-            playSound("obstacle_left");
-
-        }
-        else if(obstacleArr[2]){
-            //right
-            playSound("obstacle_right");
-
-        }
-        else if(obstacleArr[1]){
-            //ahead
-            playSound("obstacle_ahead");
-
-        }
-
+        if(obstacleArr[0] && obstacleArr[1] && obstacleArr[2]) playSound("way_blocked");
+        else if(obstacleArr[0] && obstacleArr[2]) playSound("left_and_right"); //left+right
+        else if(obstacleArr[0]) playSound("obstacle_left"); //left
+        else if(obstacleArr[2]) playSound("obstacle_right"); //right
+        else if(obstacleArr[1]) playSound("obstacle_ahead"); //ahead
     }
 }

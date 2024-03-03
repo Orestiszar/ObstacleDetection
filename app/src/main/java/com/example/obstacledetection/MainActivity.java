@@ -2,10 +2,12 @@ package com.example.obstacledetection;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentOnAttachListener;
 
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Camera;
 import android.graphics.Color;
@@ -47,6 +49,7 @@ import java.nio.ByteOrder;
 import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
+import android.Manifest;
 
 
 public class MainActivity extends AppCompatActivity implements FragmentOnAttachListener, BaseArFragment.OnSessionConfigurationListener, ArFragment.OnViewCreatedListener{
@@ -102,23 +105,9 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
-        super.onRequestPermissionsResult(requestCode, permissions, results);
-        if (!CameraPermissionHelper.hasCameraPermission(this)) {
-            Toast.makeText(this, "Camera permission is needed to run this application", Toast.LENGTH_LONG).show();
-            if (!CameraPermissionHelper.shouldShowRequestPermissionRationale(this)) {
-                // Permission denied with checking "Do not ask again".
-                CameraPermissionHelper.launchPermissionSettings(this);
-            }
-            finish();
-        }
-    }
-
-    @Override
     protected void onResume() {
         super.onResume();
-
-        if (!CameraPermissionHelper.hasCameraPermission(this)) {
+        if (!(ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)) {//in case it was deleted after the app pauses
             return;
         }
         startTimer(2000);
