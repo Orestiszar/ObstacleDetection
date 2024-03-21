@@ -8,10 +8,7 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentOnAttachListener;
 
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.Camera;
 import android.graphics.Color;
-import android.graphics.Matrix;
 
 import android.media.Image;
 import android.os.Bundle;
@@ -36,7 +33,6 @@ import android.widget.Toast;
 import com.google.ar.core.Config;
 import com.google.ar.core.Frame;
 import com.google.ar.core.Session;
-import com.google.ar.core.exceptions.CameraNotAvailableException;
 import com.google.ar.core.exceptions.NotYetAvailableException;
 import com.google.ar.sceneform.ArSceneView;
 import com.google.ar.sceneform.SceneView;
@@ -44,9 +40,6 @@ import com.google.ar.sceneform.Sceneform;
 import com.google.ar.sceneform.ux.ArFragment;
 import com.google.ar.sceneform.ux.BaseArFragment;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
 import android.Manifest;
@@ -60,7 +53,6 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     private ImageView custom_imageview;
     private Switch depthSwitch;
     private ImageView settingsButton;
-//    public TextView gyrotext;
 
     private int[][] dist_matrix;
 
@@ -69,7 +61,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 
 
     private SensorHelper sensorHelper;
-    private VibratorHelper vibratorHelper;
+    private VibratorStateMachine vibratorStateMachine;
     private SoundHelper soundHelper;
     private ObstacleStateMachine obstacleStateMachine;
     private SteepRoadStateMachine steepRoadStateMachine;
@@ -122,6 +114,8 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         stopTimer();
         // Don't receive any more updates from either sensor.
         sensorHelper.pauseSensors();
+        // Stop existing vibration
+        vibratorStateMachine.stopVibrating();
     }
 
     @Override
@@ -139,7 +133,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 
         soundHelper = new SoundHelper(this);
         sensorHelper = new SensorHelper(this);
-        vibratorHelper = new VibratorHelper(this);
+        vibratorStateMachine = new VibratorStateMachine(this,1000/ARSettings.timerPeriod);
         obstacleStateMachine = new ObstacleStateMachine(1000/ARSettings.timerPeriod); //num of fps so it takes a second
         steepRoadStateMachine = new SteepRoadStateMachine(1000/ARSettings.timerPeriod);
         depthImageProcessor =  new DepthImageProcessor();
@@ -162,6 +156,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 
     public void inflatePopupMenu(View view){
         stopTimer();
+        vibratorStateMachine.stopVibrating();
         // inflate the layout of the popup window
         LayoutInflater inflater = (LayoutInflater)getSystemService(LAYOUT_INFLATER_SERVICE);
         View popupView = inflater.inflate(R.layout.popup_window, null);
@@ -217,6 +212,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
                 ARSettings.timerPeriod = 1000/fps;
                 obstacleStateMachine.setStates(fps);
                 steepRoadStateMachine.setStates(fps);
+                vibratorStateMachine.setStates(fps);
 
                 for(int i =0;i< ARSettings.numLabelRows ;i++){
                     for (int j=0;j<ARSettings.numLabelCols;j++){
@@ -316,10 +312,8 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         }
 
         sensorHelper.updateOrientationAngles();
-//        gyrotext.setText(String.format(Locale.getDefault(),"x: %d \ny: %d\n z: %d", Math.round(sensorHelper.orientationAngles[0]),Math.round(sensorHelper.orientationAngles[1]),Math.round(sensorHelper.orientationAngles[2])));
-
-        if(sensorHelper.orientationAngles[1]>30 || sensorHelper.orientationAngles[1]<-5 || Math.abs(sensorHelper.orientationAngles[2])>20){
-            vibratorHelper.vibrate();
+        if(vibratorStateMachine.updateVibratorStateMachine(sensorHelper.orientationAngles[1],sensorHelper.orientationAngles[2])){
+            vibratorStateMachine.vibrate();
             for(int i=0;i<ARSettings.numLabelRows;i++){
                 for(int j=0;j<ARSettings.numLabelCols;j++){
                     text_array[i][j].setText("");
@@ -330,7 +324,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             soundHelper.playSound("hold_device_up");
             return;
         }
-        vibratorHelper.stopVibrating();
+        vibratorStateMachine.stopVibrating();
 
         Image depthImage = null;
         Frame frame = arSceneView.getArFrame();
@@ -355,11 +349,6 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             soundHelper.announceObstacles(obstacleStateMachine.updateObstacleStateMachine(obstacleArr));
 
         } catch (NotYetAvailableException e) {
-            // This means that depth data is not available yet.
-            // Depth data will not be available if there are no tracked
-            // feature points. This can happen when there is no motion, or when the
-            // camera loses its ability to track objects in the surrounding
-            // environment.
             for(int i=0;i<ARSettings.numLabelRows;i++){
                 for(int j=0;j<ARSettings.numLabelCols;j++){
                     text_array[i][j].setText("");

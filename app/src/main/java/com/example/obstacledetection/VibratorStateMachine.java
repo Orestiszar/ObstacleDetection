@@ -3,18 +3,21 @@ package com.example.obstacledetection;
 import static android.content.ContentValues.TAG;
 
 import android.content.Context;
-import android.graphics.Color;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.util.Log;
 
-public class VibratorHelper {
+
+public class VibratorStateMachine {
     private MainActivity mainActivity;
     private Vibrator vibrator;
     private boolean isVibrating;
+    private int states;
+    private int currState=0;
 
-    public VibratorHelper(MainActivity mainActivity){
+    public VibratorStateMachine(MainActivity mainActivity, int states){
         this.mainActivity = mainActivity;
+        this.states = states;
         vibrator = (Vibrator) this.mainActivity.getSystemService(Context.VIBRATOR_SERVICE);
         if (!vibrator.hasVibrator()) {
             Log.e(TAG, "Vibrator not available.");
@@ -22,11 +25,21 @@ public class VibratorHelper {
         }
     }
 
+    public void setStates(int states) {this.states = states;}
+
+    public boolean updateVibratorStateMachine(float yAngle, float zAngle){
+        boolean isOutOfBounds = (yAngle>ARSettings.maxYAngle || yAngle<ARSettings.minYAngle || Math.abs(zAngle)>ARSettings.maxZAngle);
+
+        if(isOutOfBounds && currState<states-1) currState++;
+        else if (!isOutOfBounds && currState>0) currState--;
+
+        return currState==states-1;
+    }
+
     public void vibrate(){
         if(isVibrating) return;
 
         isVibrating=true;
-//        vibrator.vibrate(VibrationEffect.createOneShot(1000,VibrationEffect.DEFAULT_AMPLITUDE));
 
         long[] timings = new long[] {0, 1000,1000};
         int repeat = 1;

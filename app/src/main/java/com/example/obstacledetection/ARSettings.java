@@ -9,4 +9,7 @@ public class ARSettings {
     protected static int dynamic_weight = 5;
     protected static int width_percentage = 80;
     protected static int timerPeriod = 100;
+    protected static int maxYAngle = 30;
+    protected static int minYAngle = -10;
+    protected static int maxZAngle = 20;
 }
