@@ -180,7 +180,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             }
         }
 
-        EditText dynamic_weight_ET = popupView.findViewById(R.id.EtDynamicWeight);
+        EditText mean_percent_ET = popupView.findViewById(R.id.EtMeanPercent);
         EditText width_offset_ET = popupView.findViewById(R.id.EtWidthOffset);
         EditText FPS_ET = popupView.findViewById(R.id.EtFPS);
 
@@ -189,7 +189,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             ETArr[i][1].setText(Integer.toString(ARSettings.highBoundArr[i]));
         }
 
-        dynamic_weight_ET.setText(Integer.toString(ARSettings.dynamic_weight));
+        mean_percent_ET.setText(Integer.toString(ARSettings.mean_percent));
         width_offset_ET.setText(Integer.toString(ARSettings.width_percentage));
         FPS_ET.setText(Integer.toString(1000/ARSettings.timerPeriod));
 
@@ -202,7 +202,9 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
                     ARSettings.lowBoundArr[i] = Integer.parseInt(ETArr[i][0].getText().toString());
                     ARSettings.highBoundArr[i] = Integer.parseInt(ETArr[i][1].getText().toString());
                 }
-                ARSettings.dynamic_weight = Integer.parseInt(dynamic_weight_ET.getText().toString());
+                ARSettings.mean_percent = Integer.parseInt(mean_percent_ET.getText().toString());
+                if(ARSettings.mean_percent <1) ARSettings.mean_percent =1;
+                else if(ARSettings.mean_percent >100) ARSettings.mean_percent=100;
 
                 ARSettings.width_percentage = Integer.parseInt(width_offset_ET.getText().toString());
                 if(ARSettings.width_percentage>100) ARSettings.width_percentage=100;
