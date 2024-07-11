@@ -2,18 +2,18 @@ package com.example.obstacledetection;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentOnAttachListener;
 
-import android.graphics.Bitmap;
-import android.graphics.Camera;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.graphics.Matrix;
 
 import android.media.Image;
 import android.os.Bundle;
 
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -34,19 +34,20 @@ import android.widget.Toast;
 import com.google.ar.core.Config;
 import com.google.ar.core.Frame;
 import com.google.ar.core.Session;
-import com.google.ar.core.exceptions.CameraNotAvailableException;
 import com.google.ar.core.exceptions.NotYetAvailableException;
 import com.google.ar.sceneform.ArSceneView;
+import com.google.ar.sceneform.FrameTime;
 import com.google.ar.sceneform.SceneView;
 import com.google.ar.sceneform.Sceneform;
 import com.google.ar.sceneform.ux.ArFragment;
 import com.google.ar.sceneform.ux.BaseArFragment;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.Locale;
+import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
+
+import android.Manifest;
 
 
 public class MainActivity extends AppCompatActivity implements FragmentOnAttachListener, BaseArFragment.OnSessionConfigurationListener, ArFragment.OnViewCreatedListener{
@@ -57,30 +58,23 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     private ImageView custom_imageview;
     private Switch depthSwitch;
     private ImageView settingsButton;
-    public TextView gyrotext;
-
-    protected boolean depthMap=false;
-    protected int[][] dist_matrix;
-    protected final int numLabelRows=4;
-    protected final int numLabelCols=3;
-    protected int [] lowBoundArr = new int[] {3000,5000,2000,2000};
-    protected int [] highBoundArr = new int[] {10000,10000,6000,4000};
-    protected int dynamic_weight = 5;
-    protected int width_percentage = 80;
+    private int[][] dist_matrix;
 
     private Timer timer;
     private TimerTask timerTask;
-    private int timerPeriod = 1000/10;
+
+//    private int expectedFrameRate;
+//    private ArrayList<Long> deltaList = new ArrayList<Long>();
 
     private SensorHelper sensorHelper;
-    private VibratorHelper vibratorHelper;
+    private VibratorStateMachine vibratorStateMachine;
     private SoundHelper soundHelper;
     private ObstacleStateMachine obstacleStateMachine;
     private SteepRoadStateMachine steepRoadStateMachine;
     private DepthImageProcessor depthImageProcessor;
 
     public void startTimer(int delay){
-        timer = new Timer("frame_timer");
+        timer = new Timer("timer");
         timerTask = new TimerTask() {
             @Override
             public void run() {
@@ -88,7 +82,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             }
         };
         try {
-            timer.schedule(timerTask,delay,timerPeriod);
+            timer.schedule(timerTask,delay,ARSettings.timerPeriod);
         }
         catch (Exception e){
             e.printStackTrace();
@@ -109,23 +103,9 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
-        super.onRequestPermissionsResult(requestCode, permissions, results);
-        if (!CameraPermissionHelper.hasCameraPermission(this)) {
-            Toast.makeText(this, "Camera permission is needed to run this application", Toast.LENGTH_LONG).show();
-            if (!CameraPermissionHelper.shouldShowRequestPermissionRationale(this)) {
-                // Permission denied with checking "Do not ask again".
-                CameraPermissionHelper.launchPermissionSettings(this);
-            }
-            finish();
-        }
-    }
-
-    @Override
     protected void onResume() {
         super.onResume();
-
-        if (!CameraPermissionHelper.hasCameraPermission(this)) {
+        if (!(ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)) {//in case it was deleted after the app pauses
             return;
         }
         startTimer(2000);
@@ -140,6 +120,8 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         stopTimer();
         // Don't receive any more updates from either sensor.
         sensorHelper.pauseSensors();
+        // Stop existing vibration
+        vibratorStateMachine.stopVibrating();
     }
 
     @Override
@@ -157,19 +139,19 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 
         soundHelper = new SoundHelper(this);
         sensorHelper = new SensorHelper(this);
-        vibratorHelper = new VibratorHelper(this);
-        obstacleStateMachine = new ObstacleStateMachine(this,1000/timerPeriod); //num of fps so it takes a second
-        steepRoadStateMachine = new SteepRoadStateMachine(this, 1000/timerPeriod);
+        vibratorStateMachine = new VibratorStateMachine(this,1000/ARSettings.timerPeriod);
+        obstacleStateMachine = new ObstacleStateMachine(1000/ARSettings.timerPeriod); //num of fps so it takes a second
+        steepRoadStateMachine = new SteepRoadStateMachine(1000/ARSettings.timerPeriod);
         depthImageProcessor =  new DepthImageProcessor();
 
         outer_frame_layout = findViewById(R.id.outer_frame_layout);
-        gyrotext = findViewById(R.id.gyrotext);
+//        gyrotext = findViewById(R.id.gyrotext);
         custom_imageview = new ImageView(this);
         outer_frame_layout.addView(custom_imageview);
 
         depthSwitch = findViewById(R.id.depthSwitch);
         depthSwitch.setOnCheckedChangeListener((CompoundButton compoundButton, boolean b)->{
-            depthMap = b;
+            ARSettings.depthMap = b;
             if(!b){
                 custom_imageview.setImageBitmap(null);
             }});
@@ -180,6 +162,8 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 
     public void inflatePopupMenu(View view){
         stopTimer();
+//        this.arSceneView.getScene().removeOnUpdateListener(this::frameCounter);
+        vibratorStateMachine.stopVibrating();
         // inflate the layout of the popup window
         LayoutInflater inflater = (LayoutInflater)getSystemService(LAYOUT_INFLATER_SERVICE);
         View popupView = inflater.inflate(R.layout.popup_window, null);
@@ -189,7 +173,12 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         int height = LinearLayout.LayoutParams.WRAP_CONTENT;
         boolean focusable = true; // lets taps outside the popup also dismiss it
         final PopupWindow popupWindow = new PopupWindow(popupView, width, height, focusable);
-        popupWindow.setOnDismissListener(()->{startTimer(0);});
+        popupWindow.setOnDismissListener(()->{
+            startTimer(0);
+            //The following were used to calculate dropped frames. No longer needed.
+//            deltaList.clear();
+//            this.arSceneView.getScene().addOnUpdateListener(this::frameCounter);
+        });
         // show the popup window
         // which view you pass in doesn't matter, it is only used for the window tolken
         popupWindow.showAtLocation(view, Gravity.CENTER, 0, 0);
@@ -203,18 +192,31 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             }
         }
 
-        EditText dynamic_weight_ET = popupView.findViewById(R.id.EtDynamicWeight);
+        EditText mean_percent_ET = popupView.findViewById(R.id.EtMeanPercent);
         EditText width_offset_ET = popupView.findViewById(R.id.EtWidthOffset);
         EditText FPS_ET = popupView.findViewById(R.id.EtFPS);
+        EditText absZ_ET = popupView.findViewById(R.id.EtabsZ);
+        EditText maxY_ET = popupView.findViewById(R.id.EtmaxY);
+        EditText minY_ET = popupView.findViewById(R.id.EtminY);
 
         for(int i=0;i<4;i++) {
-            ETArr[i][0].setText(Integer.toString(lowBoundArr[i]));
-            ETArr[i][1].setText(Integer.toString(highBoundArr[i]));
+            ETArr[i][0].setText(Integer.toString(ARSettings.lowBoundArr[i]));
+            ETArr[i][1].setText(Integer.toString(ARSettings.highBoundArr[i]));
         }
 
-        dynamic_weight_ET.setText(Integer.toString(dynamic_weight));
-        width_offset_ET.setText(Integer.toString(width_percentage));
-        FPS_ET.setText(Integer.toString(1000/timerPeriod));
+        mean_percent_ET.setText(Integer.toString(ARSettings.mean_percent));
+        width_offset_ET.setText(Integer.toString(ARSettings.width_percentage));
+        FPS_ET.setText(Integer.toString(1000/ARSettings.timerPeriod));
+        absZ_ET.setText(Integer.toString(ARSettings.absZAngle));
+        maxY_ET.setText(Integer.toString(ARSettings.maxYAngle));
+        minY_ET.setText(Integer.toString(ARSettings.minYAngle));
+//        The following were used for counting dropped frames. No longer needed.
+//        TextView droppedCameraFramesTextView = popupView.findViewById(R.id.droppedCameraFramesTextView);
+//        long dropped = DroppedFramesCalculator.calculateDroppedFrames(deltaList,expectedFrameRate);
+//        long total_frames=DroppedFramesCalculator.calculateTotalFrames(deltaList,expectedFrameRate);
+//        double dropped_percent = ((double)dropped/(double)total_frames)*100;
+//        long crossreference = DroppedFramesCalculator.crossReference(deltaList,expectedFrameRate);
+//        droppedCameraFramesTextView.setText(String.format("Dropped: %d, Theoretical: %d | %d,Dropped Percent: %.2f%%",dropped,total_frames,crossreference,dropped_percent));
 
         Button setButton = popupView.findViewById(R.id.setPopupParamsButton);
         setButton.setOnClickListener(new View.OnClickListener() {
@@ -222,22 +224,29 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             public void onClick(View view) {
 
                 for(int i=0;i<4;i++) {
-                    lowBoundArr[i] = Integer.parseInt(ETArr[i][0].getText().toString());
-                    highBoundArr[i] = Integer.parseInt(ETArr[i][1].getText().toString());
+                    ARSettings.lowBoundArr[i] = Integer.parseInt(ETArr[i][0].getText().toString());
+                    ARSettings.highBoundArr[i] = Integer.parseInt(ETArr[i][1].getText().toString());
                 }
-                dynamic_weight = Integer.parseInt(dynamic_weight_ET.getText().toString());
+                ARSettings.mean_percent = Integer.parseInt(mean_percent_ET.getText().toString());
+                if(ARSettings.mean_percent <1) ARSettings.mean_percent =1;
+                else if(ARSettings.mean_percent >100) ARSettings.mean_percent=100;
 
-                width_percentage = Integer.parseInt(width_offset_ET.getText().toString());
-                if(width_percentage>100) width_percentage=100;
-                else if(width_percentage<0) width_percentage=0;
+                ARSettings.width_percentage = Integer.parseInt(width_offset_ET.getText().toString());
+                if(ARSettings.width_percentage>100) ARSettings.width_percentage=100;
+                else if(ARSettings.width_percentage<0) ARSettings.width_percentage=0;
 
                 int fps = Integer.parseInt(FPS_ET.getText().toString());
-                timerPeriod = 1000/fps;
+                ARSettings.timerPeriod = 1000/fps;
                 obstacleStateMachine.setStates(fps);
                 steepRoadStateMachine.setStates(fps);
+                vibratorStateMachine.setStates(fps);
 
-                for(int i =0;i< numLabelRows ;i++){
-                    for (int j=0;j<numLabelCols;j++){
+                ARSettings.absZAngle = Integer.parseInt(absZ_ET.getText().toString());
+                ARSettings.maxYAngle = Integer.parseInt(maxY_ET.getText().toString());
+                ARSettings.minYAngle = Integer.parseInt(minY_ET.getText().toString());
+
+                for(int i =0;i< ARSettings.numLabelRows ;i++){
+                    for (int j=0;j<ARSettings.numLabelCols;j++){
                         outer_frame_layout.removeView(text_array[i][j]);
                     }
                 }
@@ -261,6 +270,8 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     public void onSessionConfiguration(Session session, Config config) {
         if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
             config.setDepthMode(Config.DepthMode.AUTOMATIC);
+            config.setPlaneFindingMode(Config.PlaneFindingMode.DISABLED);
+//            expectedFrameRate = session.getCameraConfig().getFpsRange().getUpper();
         }
         else{
             Toast.makeText(this,"This device does not support ARCore depth",Toast.LENGTH_LONG);
@@ -276,6 +287,10 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         this.arSceneView.getPlaneRenderer().setEnabled(false);
         this.arSceneView.getPlaneRenderer().setVisible(false);
     }
+
+//    private void frameCounter(FrameTime updatedTime) {
+//        deltaList.add(updatedTime.getDeltaTime(TimeUnit.NANOSECONDS));
+//    }
 
     public void createLabelGrid(){
         Image depthImage = null;
@@ -297,14 +312,14 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             }
             // new width and new height are the dimensions of the screen that the labels need to represent. The ImageView is set to fit center.
 
-            int true_width = (int)(newWidth*(width_percentage/100f));
+            int true_width = (int)(newWidth*(ARSettings.width_percentage/100f));
             int widthOffset= (newWidth-true_width)/2;
 
-            int horizontalStep = true_width/numLabelCols;
-            int verticalStep = newHeight/numLabelRows;
-            text_array = new TextView[numLabelRows][numLabelCols];
-            for(int i=0; i<numLabelRows;i++){
-                for(int j=0;j<numLabelCols;j++){
+            int horizontalStep = true_width/ARSettings.numLabelCols;
+            int verticalStep = newHeight/ARSettings.numLabelRows;
+            text_array = new TextView[ARSettings.numLabelRows][ARSettings.numLabelCols];
+            for(int i=0; i<ARSettings.numLabelRows;i++){
+                for(int j=0;j<ARSettings.numLabelCols;j++){
                     text_array[i][j] = new TextView(this);
                     FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
                             ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -332,69 +347,47 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             createLabelGrid();
             return;//return to avoid reading from null array in the catch block
         }
-
         sensorHelper.updateOrientationAngles();
-        gyrotext.setText(String.format(Locale.getDefault(),"x: %d \ny: %d\n z: %d", Math.round(sensorHelper.orientationAngles[0]),Math.round(sensorHelper.orientationAngles[1]),Math.round(sensorHelper.orientationAngles[2])));
-
-        if(sensorHelper.orientationAngles[1]>30 || sensorHelper.orientationAngles[1]<-5 || Math.abs(sensorHelper.orientationAngles[2])>20){
-            vibratorHelper.vibrate();
-            for(int i=0;i<numLabelRows;i++){
-                for(int j=0;j<numLabelCols;j++){
+        if(vibratorStateMachine.updateVibratorStateMachine(sensorHelper.orientationAngles[1],sensorHelper.orientationAngles[2])){
+            vibratorStateMachine.vibrate();
+            for(int i=0;i<ARSettings.numLabelRows;i++){
+                for(int j=0;j<ARSettings.numLabelCols;j++){
                     text_array[i][j].setText("");
                 }
             }
             text_array[1][0].setText("Παρακαλώ κρατήστε όρθια τη συσκευή");
             text_array[1][0].setTextColor(Color.WHITE);
-            soundHelper.playHoldDeviceUp();
+            soundHelper.playSound("hold_device_up");
             return;
         }
-        vibratorHelper.stopVibrating();
+        vibratorStateMachine.stopVibrating();
 
         Image depthImage = null;
         Frame frame = arSceneView.getArFrame();
         try {
             depthImage = frame.acquireDepthImage16Bits(); //160*90
             // Use the depth image here.
-            if(depthMap) custom_imageview.setImageBitmap(depthImageProcessor.ImageToBitmap(depthImage, numLabelRows, lowBoundArr,highBoundArr));
+            if(ARSettings.depthMap) custom_imageview.setImageBitmap(depthImageProcessor.ImageToBitmap(depthImage, ARSettings.numLabelRows, ARSettings.lowBoundArr,ARSettings.highBoundArr));
 
-            dist_matrix = depthImageProcessor.getAverageDistances(depthImage,numLabelRows,numLabelCols, width_percentage);
+            dist_matrix = depthImageProcessor.getAverageDistances(depthImage,ARSettings.numLabelRows,ARSettings.numLabelCols, ARSettings.width_percentage);
 
-            //to check and save if an obstacle exists in this column
-            boolean [][] obstacleArr = new boolean[numLabelRows][numLabelCols]; //init to false
-            boolean [] steepRoadArr = new boolean[numLabelCols]; //init to false
-
-            for(int i=0;i<numLabelRows;i++){
-                for(int j=0;j<numLabelCols;j++){
-
+            boolean [][] obstacleArr = obstacleStateMachine.decideObstacles(dist_matrix, sensorHelper.orientationAngles[1]);
+            boolean [] steepRoadArr = steepRoadStateMachine.decideSteepAhead(dist_matrix,sensorHelper.orientationAngles[1]);
+            for(int i=0;i<ARSettings.numLabelRows;i++) {
+                for (int j = 0; j < ARSettings.numLabelCols; j++) {
                     text_array[i][j].setText(Integer.toString(dist_matrix[i][j]));
-
-                    int dyn_bound = (int)((dynamic_weight*sensorHelper.orientationAngles[1]*dist_matrix[i][j])/1000);
-
-                    if(i==numLabelRows-1 && (dist_matrix[i][j] >= highBoundArr[i] + dyn_bound)){ //for steep roads
-                        text_array[i][j].setTextColor(Color.BLUE);
-                        steepRoadArr[j] = true;
-                        continue;
-                    }
-
-                    if(dist_matrix[i][j]<= lowBoundArr[i] + dyn_bound){
-                        text_array[i][j].setTextColor(Color.RED);
-                        obstacleArr[i][j] = true;
-                    }
+                    if(i == ARSettings.numLabelRows-1 && steepRoadArr[j]) text_array[i][j].setTextColor(Color.BLUE);
+                    else if(obstacleArr[i][j]) text_array[i][j].setTextColor(Color.RED);
                     else text_array[i][j].setTextColor(Color.WHITE);
                 }
             }
-            if(soundHelper.announceSteepRoad(steepRoadStateMachine.decideSteepAhead(steepRoadArr))) return;
+            if(soundHelper.announceSteepRoad(steepRoadStateMachine.updateSteepAheadStateMachine(steepRoadArr))) return;
+            soundHelper.announceObstacles(obstacleStateMachine.updateObstacleStateMachine(obstacleArr));
 
-            soundHelper.announceObstacles(obstacleStateMachine.decideObstacles(obstacleArr));
 
         } catch (NotYetAvailableException e) {
-            // This means that depth data is not available yet.
-            // Depth data will not be available if there are no tracked
-            // feature points. This can happen when there is no motion, or when the
-            // camera loses its ability to track objects in the surrounding
-            // environment.
-            for(int i=0;i<numLabelRows;i++){
-                for(int j=0;j<numLabelCols;j++){
+            for(int i=0;i<ARSettings.numLabelRows;i++){
+                for(int j=0;j<ARSettings.numLabelCols;j++){
                     text_array[i][j].setText("");
                 }
             }
