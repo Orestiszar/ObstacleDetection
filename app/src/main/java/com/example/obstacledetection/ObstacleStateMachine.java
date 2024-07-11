@@ -6,11 +6,13 @@ public class ObstacleStateMachine {
     private int states;
 
     public void setStates(int states) {
-        this.states = states;
+        if(states==1) this.states=2;
+        else this.states = states;
     }
 
     public ObstacleStateMachine(int states) {
         this.states = states;
+        if(states==1) this.states=2;
         stateArr = new int[ARSettings.numLabelRows][ARSettings.numLabelCols];
         for(int[] row:stateArr){
             Arrays.fill(row,0);

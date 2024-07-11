@@ -10,8 +10,8 @@
         android:id="@+id/setPopupParamsButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="380dp"
         android:layout_marginStart="125dp"
+        android:layout_marginTop="480dp"
         android:text="Set"
         android:textSize="18dp" />
 
@@ -144,10 +144,10 @@
         android:id="@+id/textView4"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="195dp"
+        android:layout_marginStart="175dp"
         android:layout_marginTop="230dp"
-        android:text="Width Offset"
-        android:textSize="18dp"/>
+        android:text="Width Percentage"
+        android:textSize="18dp" />
 
     <EditText
         android:id="@+id/EtWidthOffset"
@@ -158,22 +158,76 @@
         android:ems="6"
         android:inputType="number" />
 
+    <EditText
+        android:id="@+id/EtabsZ"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="185dp"
+        android:layout_marginTop="330dp"
+        android:ems="6"
+        android:inputType="number" />
+
     <TextView
         android:id="@+id/textView5"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="120dp"
+        android:layout_marginStart="43dp"
         android:layout_marginTop="310dp"
         android:text="Refresh Rate"
+        android:textSize="18dp" />
+
+    <TextView
+        android:id="@+id/textView7"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="70dp"
+        android:layout_marginTop="390dp"
+        android:text="MaxY"
+        android:textSize="18dp" />
+
+    <TextView
+        android:id="@+id/textView6"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="230dp"
+        android:layout_marginTop="310dp"
+        android:text="absZ"
         android:textSize="18dp" />
 
     <EditText
         android:id="@+id/EtFPS"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="107dp"
+        android:layout_marginStart="30dp"
         android:layout_marginTop="330dp"
         android:ems="6"
         android:inputType="number" />
+
+    <EditText
+        android:id="@+id/EtminY"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="185dp"
+        android:layout_marginTop="410dp"
+        android:ems="6"
+        android:inputType="number" />
+
+    <EditText
+        android:id="@+id/EtmaxY"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="30dp"
+        android:layout_marginTop="410dp"
+        android:ems="6"
+        android:inputType="number" />
+
+    <TextView
+        android:id="@+id/textView8"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="230dp"
+        android:layout_marginTop="390dp"
+        android:text="MinY"
+        android:textSize="18dp" />
 
 </RelativeLayout>

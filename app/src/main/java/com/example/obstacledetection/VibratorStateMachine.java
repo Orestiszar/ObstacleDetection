@@ -18,6 +18,7 @@ public class VibratorStateMachine {
     public VibratorStateMachine(MainActivity mainActivity, int states){
         this.mainActivity = mainActivity;
         this.states = states;
+        if(states==1) this.states=2;
         vibrator = (Vibrator) this.mainActivity.getSystemService(Context.VIBRATOR_SERVICE);
         if (!vibrator.hasVibrator()) {
             Log.e(TAG, "Vibrator not available.");
@@ -25,10 +26,13 @@ public class VibratorStateMachine {
         }
     }
 
-    public void setStates(int states) {this.states = states;}
+    public void setStates(int states) {
+        if(states==1) this.states=2;
+        else this.states = states;
+    }
 
     public boolean updateVibratorStateMachine(float yAngle, float zAngle){
-        boolean isOutOfBounds = (yAngle>ARSettings.maxYAngle || yAngle<ARSettings.minYAngle || Math.abs(zAngle)>ARSettings.maxZAngle);
+        boolean isOutOfBounds = (yAngle>ARSettings.maxYAngle || yAngle<ARSettings.minYAngle || Math.abs(zAngle)>ARSettings.absZAngle);
 
         if(isOutOfBounds && currState<states-1) currState++;
         else if (!isOutOfBounds && currState>0) currState--;

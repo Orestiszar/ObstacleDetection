@@ -13,6 +13,7 @@ import android.graphics.Color;
 import android.media.Image;
 import android.os.Bundle;
 
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -35,13 +36,17 @@ import com.google.ar.core.Frame;
 import com.google.ar.core.Session;
 import com.google.ar.core.exceptions.NotYetAvailableException;
 import com.google.ar.sceneform.ArSceneView;
+import com.google.ar.sceneform.FrameTime;
 import com.google.ar.sceneform.SceneView;
 import com.google.ar.sceneform.Sceneform;
 import com.google.ar.sceneform.ux.ArFragment;
 import com.google.ar.sceneform.ux.BaseArFragment;
 
+import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
+
 import android.Manifest;
 
 
@@ -53,12 +58,13 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     private ImageView custom_imageview;
     private Switch depthSwitch;
     private ImageView settingsButton;
-
     private int[][] dist_matrix;
 
     private Timer timer;
     private TimerTask timerTask;
 
+//    private int expectedFrameRate;
+//    private ArrayList<Long> deltaList = new ArrayList<Long>();
 
     private SensorHelper sensorHelper;
     private VibratorStateMachine vibratorStateMachine;
@@ -68,7 +74,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     private DepthImageProcessor depthImageProcessor;
 
     public void startTimer(int delay){
-        timer = new Timer("frame_timer");
+        timer = new Timer("timer");
         timerTask = new TimerTask() {
             @Override
             public void run() {
@@ -156,6 +162,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
 
     public void inflatePopupMenu(View view){
         stopTimer();
+//        this.arSceneView.getScene().removeOnUpdateListener(this::frameCounter);
         vibratorStateMachine.stopVibrating();
         // inflate the layout of the popup window
         LayoutInflater inflater = (LayoutInflater)getSystemService(LAYOUT_INFLATER_SERVICE);
@@ -166,7 +173,12 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         int height = LinearLayout.LayoutParams.WRAP_CONTENT;
         boolean focusable = true; // lets taps outside the popup also dismiss it
         final PopupWindow popupWindow = new PopupWindow(popupView, width, height, focusable);
-        popupWindow.setOnDismissListener(()->{startTimer(0);});
+        popupWindow.setOnDismissListener(()->{
+            startTimer(0);
+            //The following were used to calculate dropped frames. No longer needed.
+//            deltaList.clear();
+//            this.arSceneView.getScene().addOnUpdateListener(this::frameCounter);
+        });
         // show the popup window
         // which view you pass in doesn't matter, it is only used for the window tolken
         popupWindow.showAtLocation(view, Gravity.CENTER, 0, 0);
@@ -183,6 +195,9 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         EditText mean_percent_ET = popupView.findViewById(R.id.EtMeanPercent);
         EditText width_offset_ET = popupView.findViewById(R.id.EtWidthOffset);
         EditText FPS_ET = popupView.findViewById(R.id.EtFPS);
+        EditText absZ_ET = popupView.findViewById(R.id.EtabsZ);
+        EditText maxY_ET = popupView.findViewById(R.id.EtmaxY);
+        EditText minY_ET = popupView.findViewById(R.id.EtminY);
 
         for(int i=0;i<4;i++) {
             ETArr[i][0].setText(Integer.toString(ARSettings.lowBoundArr[i]));
@@ -192,6 +207,16 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         mean_percent_ET.setText(Integer.toString(ARSettings.mean_percent));
         width_offset_ET.setText(Integer.toString(ARSettings.width_percentage));
         FPS_ET.setText(Integer.toString(1000/ARSettings.timerPeriod));
+        absZ_ET.setText(Integer.toString(ARSettings.absZAngle));
+        maxY_ET.setText(Integer.toString(ARSettings.maxYAngle));
+        minY_ET.setText(Integer.toString(ARSettings.minYAngle));
+//        The following were used for counting dropped frames. No longer needed.
+//        TextView droppedCameraFramesTextView = popupView.findViewById(R.id.droppedCameraFramesTextView);
+//        long dropped = DroppedFramesCalculator.calculateDroppedFrames(deltaList,expectedFrameRate);
+//        long total_frames=DroppedFramesCalculator.calculateTotalFrames(deltaList,expectedFrameRate);
+//        double dropped_percent = ((double)dropped/(double)total_frames)*100;
+//        long crossreference = DroppedFramesCalculator.crossReference(deltaList,expectedFrameRate);
+//        droppedCameraFramesTextView.setText(String.format("Dropped: %d, Theoretical: %d | %d,Dropped Percent: %.2f%%",dropped,total_frames,crossreference,dropped_percent));
 
         Button setButton = popupView.findViewById(R.id.setPopupParamsButton);
         setButton.setOnClickListener(new View.OnClickListener() {
@@ -215,6 +240,10 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
                 obstacleStateMachine.setStates(fps);
                 steepRoadStateMachine.setStates(fps);
                 vibratorStateMachine.setStates(fps);
+
+                ARSettings.absZAngle = Integer.parseInt(absZ_ET.getText().toString());
+                ARSettings.maxYAngle = Integer.parseInt(maxY_ET.getText().toString());
+                ARSettings.minYAngle = Integer.parseInt(minY_ET.getText().toString());
 
                 for(int i =0;i< ARSettings.numLabelRows ;i++){
                     for (int j=0;j<ARSettings.numLabelCols;j++){
@@ -241,6 +270,8 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
     public void onSessionConfiguration(Session session, Config config) {
         if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
             config.setDepthMode(Config.DepthMode.AUTOMATIC);
+            config.setPlaneFindingMode(Config.PlaneFindingMode.DISABLED);
+//            expectedFrameRate = session.getCameraConfig().getFpsRange().getUpper();
         }
         else{
             Toast.makeText(this,"This device does not support ARCore depth",Toast.LENGTH_LONG);
@@ -256,6 +287,10 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
         this.arSceneView.getPlaneRenderer().setEnabled(false);
         this.arSceneView.getPlaneRenderer().setVisible(false);
     }
+
+//    private void frameCounter(FrameTime updatedTime) {
+//        deltaList.add(updatedTime.getDeltaTime(TimeUnit.NANOSECONDS));
+//    }
 
     public void createLabelGrid(){
         Image depthImage = null;
@@ -312,7 +347,6 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             createLabelGrid();
             return;//return to avoid reading from null array in the catch block
         }
-
         sensorHelper.updateOrientationAngles();
         if(vibratorStateMachine.updateVibratorStateMachine(sensorHelper.orientationAngles[1],sensorHelper.orientationAngles[2])){
             vibratorStateMachine.vibrate();
@@ -349,6 +383,7 @@ public class MainActivity extends AppCompatActivity implements FragmentOnAttachL
             }
             if(soundHelper.announceSteepRoad(steepRoadStateMachine.updateSteepAheadStateMachine(steepRoadArr))) return;
             soundHelper.announceObstacles(obstacleStateMachine.updateObstacleStateMachine(obstacleArr));
+
 
         } catch (NotYetAvailableException e) {
             for(int i=0;i<ARSettings.numLabelRows;i++){

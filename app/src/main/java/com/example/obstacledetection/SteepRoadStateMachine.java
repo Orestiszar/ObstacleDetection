@@ -7,11 +7,13 @@ public class SteepRoadStateMachine {
     private int states;
 
     public void setStates(int states) {
-        this.states = states;
+        if(states==1) this.states=2;
+        else this.states = states;
     }
 
     public SteepRoadStateMachine(int states) {
         this.states = states;
+        if(states==1) this.states=2;
         steepArr = new int[ARSettings.numLabelCols];
         Arrays.fill(steepArr,0);
     }
